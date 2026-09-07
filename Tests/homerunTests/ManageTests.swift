@@ -1,0 +1,95 @@
+//  ManageTests.swift
+//  homerun
+//
+//  Created by Jamie Le Souëf on 08/09/2026.
+//
+
+import Foundation
+import Testing
+@testable import homerun
+
+// Covers the config-mutation flags: --add/--remove (with "."), --remove-all,
+// --list, --default-wip-name, and --recursive. All against a fake GitClient and
+// a fake ConfigStore — no test touches the real config file or a real repo.
+struct ManageTests {
+    func perform(_ arguments: [String], config: Config, git: FakeGitClient = FakeGitClient([:])) throws -> (code: Int32, store: RecordingConfigStore) {
+        let store = RecordingConfigStore(config: config)
+        let code = try Homerun.parse(arguments).perform(
+            git: git, store: store, confirmer: FakeConfirmer(answer: true), stdinIsTTY: false)
+        return (code, store)
+    }
+
+    @Test func dotResolvesToCurrentDirectoryOnAdd() throws {
+        let cwd = FileManager.default.currentDirectoryPath
+        let git = FakeGitClient([cwd: .init()])
+        let (code, store) = try perform(["--add", "."], config: Config(), git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.first?.repoPath == cwd)
+    }
+
+    @Test func dotResolvesToCurrentDirectoryOnRemove() throws {
+        let cwd = FileManager.default.currentDirectoryPath
+        let existing = Config(repos: [RepoEntry(repoPath: cwd, wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--remove", "."], config: existing)
+        #expect(code == 0)
+        #expect(store.saved?.repos.isEmpty == true)
+    }
+
+    @Test func removeAllClearsEveryRepo() throws {
+        let existing = Config(repos: [
+            RepoEntry(repoPath: "/a", wipName: "WIP", main: false),
+            RepoEntry(repoPath: "/b", wipName: "WIP", main: false),
+        ])
+        let (code, store) = try perform(["--remove-all"], config: existing)
+        #expect(code == 0)
+        #expect(store.saved?.repos.isEmpty == true)
+    }
+
+    @Test func listPrintsWithoutWriting() throws {
+        let existing = Config(repos: [RepoEntry(repoPath: "/a", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--list"], config: existing)
+        #expect(code == 0)
+        #expect(store.saved == nil)
+    }
+
+    @Test func defaultWipNameIsUsedWhenAddOmitsItsOwn() throws {
+        let git = FakeGitClient(["/a": .init()])
+        let (code, store) = try perform(["--add", "/a"], config: Config(defaultWipName: "SAVE"), git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.first?.wipName == "SAVE")
+    }
+
+    @Test func explicitWipNameOverridesDefault() throws {
+        let git = FakeGitClient(["/a": .init()])
+        let (code, store) = try perform(["--add", "/a", "--wip-name", "SNAP"], config: Config(defaultWipName: "SAVE"), git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.first?.wipName == "SNAP")
+    }
+
+    @Test func settingDefaultWipNameStoresItAndDoesNotScan() throws {
+        let (code, store) = try perform(["--default-wip-name", "SAVE"], config: Config())
+        #expect(code == 0)
+        #expect(store.saved?.defaultWipName == "SAVE")
+    }
+
+    @Test func recursiveAddFindsEveryRepoUnderRoot() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-recursive-\(UUID().uuidString)")
+        let repoA = root.appendingPathComponent("a")
+        let repoB = root.appendingPathComponent("nested/b")
+        let plain = root.appendingPathComponent("just-a-folder")
+        try FileManager.default.createDirectory(at: repoA, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: repoB, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: plain, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        // FakeGitClient decides what counts as a repo; no real `.git` needed.
+        let git = FakeGitClient([repoA.path: .init(), repoB.path: .init()])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: Config(), git: git)
+        #expect(code == 0)
+        #expect(Set(store.saved?.repos.map(\.repoPath) ?? []) == [repoA.path, repoB.path])
+    }
+
+    @Test func recursiveWithoutAddIsRejected() {
+        #expect(throws: (any Error).self) { try Homerun.parse(["--recursive"]) }
+    }
+}
