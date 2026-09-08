@@ -36,6 +36,7 @@ homerun --sync --repo "~/dev/foo"           # limit to one repo, repeatable
 homerun --add "~/dev/foo" --main false      # or: homerun -a ~/dev/foo -m false
 homerun --add .                             # "." resolves to the current folder
 homerun --add ~/dev --recursive             # walk the tree, add every repo found
+homerun --main true                         # set main for the repo you are standing in
 homerun --remove .                          # or by id: homerun --remove <uuid>
 homerun --remove-all                        # asks to confirm; drop every tracked repo
 homerun --remove-all --yolo                 # skip the confirm
@@ -44,6 +45,8 @@ homerun --default-wip-name "SAVE"           # set the config-wide default prefix
 ```
 
 `--add-path`/`--remove-path` are accepted as aliases of `--add`/`--remove`. Every flag also has a single-letter short form (`-s`, `-d`, `-y`, `-a`, `-r`, `-R`, `-l`, `-A`, `-p`, `-m`, `-w`, `-W`) — see `homerun --help`.
+
+`--main <true|false>` on its own updates the tracked repo whose path is the current folder — run it from the repo root. It fails with exit 1 if the current folder is not in the config. Passed alongside `--add`, it applies to the repo being added instead.
 
 `--yolo` and `--dry-run` together is an error. `--recursive` without `--add` is an error.
 

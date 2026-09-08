@@ -40,8 +40,8 @@ struct Homerun: AsyncParsableCommand {
     @Option(name: [.customShort("r"), .customLong("remove"), .long], help: "Remove a repo from the config and exit, by its id, its path, or \".\" for the current folder.")
     var removePath: String?
 
-    @Option(name: [.customShort("m"), .customLong("main")], help: "With --add: push even when the branch is main or master.")
-    var allowMain = false
+    @Option(name: [.customShort("m"), .customLong("main")], help: "Push even when the branch is main or master. With --add it applies to the repo being added; on its own it updates the repo in the current folder.")
+    var allowMain: Bool?
 
     @Option(name: [.customShort("w"), .customLong("wip-name")], help: "With --add: prefix for the WIP commit message. Defaults to the config default, or \"WIP\".")
     var wipName: String?
@@ -73,6 +73,7 @@ struct Homerun: AsyncParsableCommand {
         if let defaultWipName { return try setDefaultWipName(defaultWipName, store: store) }
         if let addPath { return try add(addPath, git: git, store: store) }
         if let removePath { return try remove(removePath, store: store) }
+        if let allowMain { return try setMain(allowMain, store: store) }
         if removeAll { return try removeAllRepos(store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
         if list { return try printList(store: store) }
         guard sync || dryRun else {
@@ -147,7 +148,7 @@ struct Homerun: AsyncParsableCommand {
             print("📁 Found \(found.count) repo\(found.count == 1 ? "" : "s"):")
             for repoPath in found { print("   " + Style.paint(repoPath, "2")) }
             for repoPath in found {
-                config.upsert(RepoEntry(repoPath: repoPath, wipName: wip, main: allowMain))
+                config.upsert(RepoEntry(repoPath: repoPath, wipName: wip, main: allowMain ?? false))
             }
             try store.save(config)
             print(Style.paint("✅ Added \(found.count) repo\(found.count == 1 ? "" : "s") under \(path)", "32"))
@@ -155,7 +156,7 @@ struct Homerun: AsyncParsableCommand {
         }
 
         print("🔍 Checking \(path) is a git repo...")
-        let entry = RepoEntry(repoPath: path, wipName: wip, main: allowMain)
+        let entry = RepoEntry(repoPath: path, wipName: wip, main: allowMain ?? false)
         guard git.isRepo(at: entry.expandedPath) else {
             print(Style.paint("❌ \(path) is not a git repo.", "31"))
             return 1
@@ -229,6 +230,19 @@ struct Homerun: AsyncParsableCommand {
             print("   🔀 main: " + (entry.main ? Style.paint("true", "32") : Style.paint("false", "2")))
             if index < config.repos.count - 1 { print() }
         }
+        return 0
+    }
+
+    // Standalone `--main <bool>`: retargets the repo the user is standing in.
+    private func setMain(_ value: Bool, store: any ConfigStore) throws -> Int32 {
+        var config = try store.load() ?? Config()
+        let path = resolved(".")
+        guard config.setMain(value, path: path) else {
+            print(Style.paint("❌ \(path) is not in the config. Add it with --add.", "31"))
+            return 1
+        }
+        try store.save(config)
+        print(Style.paint("🔀 main set to \(value) for \(path)", "32"))
         return 0
     }
 
