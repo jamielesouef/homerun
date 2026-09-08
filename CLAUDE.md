@@ -164,6 +164,12 @@ code (`Style.swift`, `Row.swift`, `Confirmer.swift`) — no dependency for any o
 them. Config is read and written with `Foundation`'s `JSONEncoder`/`JSONDecoder`
 — no YAML dependency.
 
+## Branching
+
+- `feature/<name>` — new features
+- `chore/<name>` — small updates
+- `fix/<name>` — bug fixes
+
 ## Rules
 
 - Never force push.
