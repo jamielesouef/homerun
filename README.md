@@ -63,10 +63,10 @@ If nothing needs attention, homerun prints `Everything is pushed.` and exits wit
 ```
 Scanning 6 repos
 
-  ↑  kick-tvos        4 changed, 1 ahead      push → origin/feat-player
+  ↑  tvos-app         4 changed, 1 ahead      push → origin/feat-player
   ↑  homerun          2 changed, no upstream  push → origin/main (-u)
   ⊘  dotfiles         on main, main: false    skip
-  ✓  kick-ios         clean
+  ✓  ios-app          clean
   ✓  scratch          clean
 
 2 to push · 1 skipped · 3 clean
@@ -75,7 +75,7 @@ Continue? [y/N]
 ```
 
 ```
-  ✓  kick-tvos        pushed → origin/feat-player
+  ✓  tvos-app         pushed → origin/feat-player
   ✓  homerun          pushed → origin/main (-u)
   ⊘  dotfiles         skipped
   ✗  scratch          push rejected (non-fast-forward)
