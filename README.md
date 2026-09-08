@@ -10,6 +10,14 @@ Work sits uncommitted, or committed but unpushed, on whichever machine it was st
 
 ## Install
 
+Via Homebrew (no Swift needed):
+
+```
+brew install jamielesouef/tap/homerun
+```
+
+From source:
+
 ```
 ./install.sh
 ```
