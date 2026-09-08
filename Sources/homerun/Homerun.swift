@@ -84,7 +84,7 @@ struct Homerun: AsyncParsableCommand {
 
     private func runSync(git: any GitClient, store: any ConfigStore, confirmer: any Confirmer, stdinIsTTY: Bool) throws -> Int32 {
         guard let config = try store.load(), !config.repos.isEmpty else {
-            print("No repos configured. Add one with --add <path>.")
+            print("📭 No repos configured. Add one with --add <path>.")
             return 0
         }
         guard let entries = try filtered(config.repos) else { return 1 }
@@ -124,7 +124,7 @@ struct Homerun: AsyncParsableCommand {
         let wanted = repo.map { RepoEntry(repoPath: $0, wipName: "", main: false).canonicalPath }
         let known = Set(entries.map(\.canonicalPath))
         for (path, key) in zip(repo, wanted) where !known.contains(key) {
-            print("error: \(path) is not in the config. Add it with --add.")
+            print(Style.paint("❌ \(path) is not in the config. Add it with --add.", "31"))
             return nil
         }
         return entries.filter { wanted.contains($0.canonicalPath) }
@@ -132,38 +132,38 @@ struct Homerun: AsyncParsableCommand {
 
     private func add(_ rawPath: String, git: any GitClient, store: any ConfigStore) throws -> Int32 {
         let path = resolved(rawPath)
-        if path != rawPath { print("Resolved \"\(rawPath)\" to \(path)") }
+        if path != rawPath { print("📍 Resolved \"\(rawPath)\" to \(path)") }
         var config = try store.load() ?? Config()
         let wip = wipName ?? config.defaultWipName ?? "WIP"
 
         if recursive {
             let root = NSString(string: path).expandingTildeInPath
-            print("Walking \(root) for git repos...")
+            print("🔎 Walking \(root) for git repos...")
             let found = Self.findRepos(in: root, git: git)
             guard !found.isEmpty else {
-                print("error: no git repos found under \(path).")
+                print(Style.paint("❌ No git repos found under \(path).", "31"))
                 return 1
             }
-            print("Found \(found.count) repo\(found.count == 1 ? "" : "s"):")
-            for repoPath in found { print("  \(repoPath)") }
+            print("📁 Found \(found.count) repo\(found.count == 1 ? "" : "s"):")
+            for repoPath in found { print("   " + Style.paint(repoPath, "2")) }
             for repoPath in found {
                 config.upsert(RepoEntry(repoPath: repoPath, wipName: wip, main: allowMain))
             }
             try store.save(config)
-            print("Added \(found.count) repo\(found.count == 1 ? "" : "s") under \(path)")
+            print(Style.paint("✅ Added \(found.count) repo\(found.count == 1 ? "" : "s") under \(path)", "32"))
             return 0
         }
 
-        print("Checking \(path) is a git repo...")
+        print("🔍 Checking \(path) is a git repo...")
         let entry = RepoEntry(repoPath: path, wipName: wip, main: allowMain)
         guard git.isRepo(at: entry.expandedPath) else {
-            print("error: \(path) is not a git repo.")
+            print(Style.paint("❌ \(path) is not a git repo.", "31"))
             return 1
         }
         config.upsert(entry)
         try store.save(config)
         let id = config.repos.first(where: { $0.canonicalPath == entry.canonicalPath })?.id ?? entry.id
-        print("Added \(path) (id: \(id))")
+        print(Style.paint("✅ Added \(path)", "32") + "  " + Style.paint("(\(id))", "2"))
         return 0
     }
 
@@ -174,21 +174,21 @@ struct Homerun: AsyncParsableCommand {
         if let id = UUID(uuidString: raw) {
             let removed = config.repos.first { $0.id == id }
             guard config.remove(id: id) else {
-                print("error: no repo with id \(raw).")
+                print(Style.paint("❌ No repo with id \(raw).", "31"))
                 return 1
             }
             try store.save(config)
-            print("Removed \(removed?.repoPath ?? raw) (id: \(id))")
+            print(Style.paint("🗑️  Removed \(removed?.repoPath ?? raw)", "32") + "  " + Style.paint("(\(id))", "2"))
             return 0
         }
 
         let path = resolved(raw)
         guard config.remove(path: path) else {
-            print("error: \(path) is not in the config.")
+            print(Style.paint("❌ \(path) is not in the config.", "31"))
             return 1
         }
         try store.save(config)
-        print("Removed \(path)")
+        print(Style.paint("🗑️  Removed \(path)", "32"))
         return 0
     }
 
@@ -196,33 +196,38 @@ struct Homerun: AsyncParsableCommand {
         var config = try store.load() ?? Config()
         let count = config.repos.count
         guard count > 0 else {
-            print("No repos configured.")
+            print("📭 No repos configured.")
             return 0
         }
         if !yolo {
             guard stdinIsTTY else {
-                print("Not a TTY — pass --yes to run unattended.")
+                print(Style.paint("❌ Not a TTY — pass --yes to run unattended.", "31"))
                 return 1
             }
-            guard confirmer.confirm(prompt: "Remove all \(count) repo\(count == 1 ? "" : "s")? [y/N] ") else {
-                print("Cancelled. Nothing was changed.")
+            guard confirmer.confirm(prompt: "🗑️  Remove all \(count) repo\(count == 1 ? "" : "s")? [y/N] ") else {
+                print("🙅 Cancelled. Nothing was changed.")
                 return 0
             }
         }
         config.repos.removeAll()
         try store.save(config)
-        print("Removed \(count) repo\(count == 1 ? "" : "s").")
+        print(Style.paint("🗑️  Removed \(count) repo\(count == 1 ? "" : "s").", "32"))
         return 0
     }
 
     private func printList(store: any ConfigStore) throws -> Int32 {
         let config = try store.load() ?? Config()
         guard !config.repos.isEmpty else {
-            print("No repos configured. Add one with --add <path>.")
+            print("📭 No repos configured. Add one with --add <path>.")
             return 0
         }
-        for entry in config.repos {
-            print("  \(entry.repoPath)  (id: \(entry.id), wip: \(entry.wipName), main: \(entry.main))")
+        print("📋 \(config.repos.count) repo\(config.repos.count == 1 ? "" : "s") tracked\n")
+        for (index, entry) in config.repos.enumerated() {
+            print(Style.paint("📦 \(entry.name)", "1;36") + "  " + Style.paint("(\(entry.id))", "2"))
+            print("   📂 " + Style.paint(entry.repoPath, "2"))
+            print("   💾 commit: \(entry.wipName)")
+            print("   🔀 main: " + (entry.main ? Style.paint("true", "32") : Style.paint("false", "2")))
+            if index < config.repos.count - 1 { print() }
         }
         return 0
     }
@@ -231,7 +236,7 @@ struct Homerun: AsyncParsableCommand {
         var config = try store.load() ?? Config()
         config.defaultWipName = name
         try store.save(config)
-        print("Default WIP name set to \(name)")
+        print(Style.paint("⚙️  Default commit prefix set to \"\(name)\"", "32"))
         return 0
     }
 
