@@ -44,12 +44,16 @@ the outcome cannot disagree.
 ```json
 {
   "repos": [
-    { "repoPath": "~/dev/foo", "wipName": "WIP", "main": false }
+    { "id": "71E1185C-AFA1-4791-B0C3-AD2892F2C49D", "repoPath": "~/dev/foo", "wipName": "WIP", "main": false }
   ],
   "defaultWipName": "WIP"
 }
 ```
 
+- `id` — a UUID assigned when the repo is added. Stable across re-adds of the
+  same path; shown by `--list` and taken by `--remove <id>`. A config written
+  before ids existed loads fine — each entry gets one assigned and written back
+  on first load, so it stays the same on every load after that.
 - `repoPath` — absolute or tilde-expanded path. Accepts `~/...` or `/Users/...`.
 - `wipName` — prefix for the WIP commit message. The message is
   `"\(wipName): \(ISO8601 timestamp)"`.
@@ -71,9 +75,10 @@ homerun --sync --repo "~/dev/foo"           # limit to one repo, repeatable
 homerun --add "~/dev/foo" --main false      # or: homerun -a ~/dev/foo -m false
 homerun --add .                             # "." resolves to the current folder
 homerun --add ~/dev --recursive             # walk the tree, add every repo found
-homerun --remove .
-homerun --remove-all                        # drop every tracked repo
-homerun --list                              # show every tracked repo
+homerun --remove .                          # or by id: homerun --remove <uuid>
+homerun --remove-all                        # asks to confirm; drop every tracked repo
+homerun --remove-all --yolo                 # skip the confirm
+homerun --list                              # show every tracked repo, with its id
 homerun --default-wip-name "SAVE"           # set the config-wide default prefix
 ```
 
@@ -89,7 +94,14 @@ the config (or just read it, for `--list`) and exit without scanning. Adding a
 path that is not a git repo is an error, unless `--recursive` is set, in which
 case every git repo found under that path is added and the path itself is not
 required to be one. Adding a duplicate path updates the existing entry rather
-than appending a second one.
+than appending a second one — its id does not change.
+
+`--add` prints what it is doing as it goes: the resolved path, the git-repo
+check, and — with `--recursive` — every folder found before any of them are
+added. `--remove` takes either a repo's id or its path (`.` for the current
+folder); a value that parses as a UUID is always treated as an id. `--remove-all`
+asks `Remove all N repos? [y/N]` unless `--yolo` is passed, and behaves like the
+main sync flow when stdin is not a TTY: it refuses rather than hanging.
 
 ## Output
 

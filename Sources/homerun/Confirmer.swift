@@ -5,5 +5,5 @@
 //
 
 protocol Confirmer: Sendable {
-    func confirm() -> Bool
+    func confirm(prompt: String) -> Bool
 }

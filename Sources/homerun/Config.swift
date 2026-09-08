@@ -13,10 +13,19 @@ struct Config: Codable, Equatable, Sendable {
 
     mutating func upsert(_ entry: RepoEntry) {
         if let index = repos.firstIndex(where: { $0.canonicalPath == entry.canonicalPath }) {
-            repos[index] = entry
+            // Re-adding the same path updates it in place; its id does not churn.
+            var updated = entry
+            updated.id = repos[index].id
+            repos[index] = updated
         } else {
             repos.append(entry)
         }
+    }
+
+    mutating func remove(id: UUID) -> Bool {
+        let before = repos.count
+        repos.removeAll { $0.id == id }
+        return repos.count != before
     }
 
     mutating func remove(path: String) -> Bool {

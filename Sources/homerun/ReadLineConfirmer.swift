@@ -7,8 +7,8 @@
 import Foundation
 
 struct ReadLineConfirmer: Confirmer {
-    func confirm() -> Bool {
-        print("Continue? [y/N] ", terminator: "")
+    func confirm(prompt: String) -> Bool {
+        print(prompt, terminator: "")
         // No newline means no automatic flush, so the prompt would never appear.
         fflush(stdout)
         let answer = readLine()?.trimmingCharacters(in: .whitespaces).lowercased() ?? ""

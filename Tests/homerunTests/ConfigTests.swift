@@ -45,12 +45,28 @@ struct ConfigTests {
         #expect(try store.load()?.defaultWipName == nil)
     }
 
-    @Test func duplicatePathUpdatesInPlace() {
-        var config = Config(repos: [RepoEntry(repoPath: "~/dev/foo", wipName: "WIP", main: false)])
+    @Test func duplicatePathUpdatesInPlaceAndKeepsSameId() {
+        let original = RepoEntry(repoPath: "~/dev/foo", wipName: "WIP", main: false)
+        var config = Config(repos: [original])
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         config.upsert(RepoEntry(repoPath: "\(home)/dev/foo", wipName: "Changed", main: true))
         #expect(config.repos.count == 1)
         #expect(config.repos[0].wipName == "Changed")
         #expect(config.repos[0].main)
+        #expect(config.repos[0].id == original.id)
+    }
+
+    @Test func legacyConfigWithoutIdsStillLoads() throws {
+        let legacyJSON = Data("""
+        {"repos":[{"repoPath":"~/dev/old","wipName":"WIP","main":false}]}
+        """.utf8)
+        try FileManager.default.createDirectory(at: store.fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try legacyJSON.write(to: store.fileURL)
+        let loaded = try #require(try store.load())
+        #expect(loaded.repos.first?.repoPath == "~/dev/old")
+
+        // The minted id must be written back, or every load hands out a new one.
+        let again = try #require(try store.load())
+        #expect(again.repos.first?.id == loaded.repos.first?.id)
     }
 }

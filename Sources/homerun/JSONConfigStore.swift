@@ -19,7 +19,22 @@ struct JSONConfigStore: ConfigStore {
     func load() throws -> Config? {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
         let data = try Data(contentsOf: fileURL)
-        return try JSONDecoder().decode(Config.self, from: data)
+        let config = try JSONDecoder().decode(Config.self, from: data)
+        // A pre-id config mints a fresh UUID per entry on decode; write it back once
+        // so `--list` and a later `--remove <id>` see the same id across runs.
+        if try hasEntryMissingId(in: data) {
+            try save(config)
+        }
+        return config
+    }
+
+    private struct IdProbe: Decodable {
+        struct Entry: Decodable { var id: UUID? }
+        var repos: [Entry]
+    }
+
+    private func hasEntryMissingId(in data: Data) throws -> Bool {
+        try JSONDecoder().decode(IdProbe.self, from: data).repos.contains { $0.id == nil }
     }
 
     func save(_ config: Config) throws {
