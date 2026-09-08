@@ -38,6 +38,30 @@ struct ManageTests {
         #expect(store.saved?.repos.isEmpty == true)
     }
 
+    @Test func mainFlagAloneUpdatesTheRepoInTheCurrentFolder() throws {
+        let cwd = FileManager.default.currentDirectoryPath
+        let existing = Config(repos: [RepoEntry(repoPath: cwd, wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--main", "true"], config: existing)
+        #expect(code == 0)
+        #expect(store.saved?.repos.first?.main == true)
+        #expect(store.saved?.repos.first?.id == existing.repos[0].id)
+    }
+
+    @Test func mainFlagAloneFailsOutsideAConfiguredRepo() throws {
+        let existing = Config(repos: [RepoEntry(repoPath: "/somewhere/else", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--main", "false"], config: existing)
+        #expect(code == 1)
+        #expect(store.saved == nil)
+    }
+
+    @Test func mainFlagStillAppliesToTheRepoBeingAdded() throws {
+        let cwd = FileManager.default.currentDirectoryPath
+        let git = FakeGitClient([cwd: .init()])
+        let (code, store) = try perform(["--add", ".", "--main", "true"], config: Config(), git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.first?.main == true)
+    }
+
     @Test func removeAllClearsEveryRepoWithYolo() throws {
         let existing = Config(repos: [
             RepoEntry(repoPath: "/a", wipName: "WIP", main: false),

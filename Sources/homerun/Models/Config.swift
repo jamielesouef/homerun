@@ -22,6 +22,14 @@ struct Config: Codable, Equatable, Sendable {
         }
     }
 
+    // Leaves the entry's id and every other field untouched.
+    mutating func setMain(_ value: Bool, path: String) -> Bool {
+        let key = RepoEntry(repoPath: path, wipName: "", main: false).canonicalPath
+        guard let index = repos.firstIndex(where: { $0.canonicalPath == key }) else { return false }
+        repos[index].main = value
+        return true
+    }
+
     mutating func remove(id: UUID) -> Bool {
         let before = repos.count
         repos.removeAll { $0.id == id }
