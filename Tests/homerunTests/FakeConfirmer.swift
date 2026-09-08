@@ -9,5 +9,5 @@
 struct FakeConfirmer: Confirmer {
     var answer: Bool
 
-    func confirm() -> Bool { answer }
+    func confirm(prompt: String) -> Bool { answer }
 }

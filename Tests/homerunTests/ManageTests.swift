@@ -12,10 +12,13 @@ import Testing
 // --list, --default-wip-name, and --recursive. All against a fake GitClient and
 // a fake ConfigStore — no test touches the real config file or a real repo.
 struct ManageTests {
-    func perform(_ arguments: [String], config: Config, git: FakeGitClient = FakeGitClient([:])) throws -> (code: Int32, store: RecordingConfigStore) {
+    func perform(
+        _ arguments: [String], config: Config, git: FakeGitClient = FakeGitClient([:]),
+        confirm: Bool = true, tty: Bool = false
+    ) throws -> (code: Int32, store: RecordingConfigStore) {
         let store = RecordingConfigStore(config: config)
         let code = try Homerun.parse(arguments).perform(
-            git: git, store: store, confirmer: FakeConfirmer(answer: true), stdinIsTTY: false)
+            git: git, store: store, confirmer: FakeConfirmer(answer: confirm), stdinIsTTY: tty)
         return (code, store)
     }
 
@@ -35,14 +38,61 @@ struct ManageTests {
         #expect(store.saved?.repos.isEmpty == true)
     }
 
-    @Test func removeAllClearsEveryRepo() throws {
+    @Test func removeAllClearsEveryRepoWithYolo() throws {
         let existing = Config(repos: [
             RepoEntry(repoPath: "/a", wipName: "WIP", main: false),
             RepoEntry(repoPath: "/b", wipName: "WIP", main: false),
         ])
-        let (code, store) = try perform(["--remove-all"], config: existing)
+        let (code, store) = try perform(["--remove-all", "--yolo"], config: existing)
         #expect(code == 0)
         #expect(store.saved?.repos.isEmpty == true)
+    }
+
+    @Test func removeAllAsksAndProceedsOnYes() throws {
+        let existing = Config(repos: [RepoEntry(repoPath: "/a", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--remove-all"], config: existing, confirm: true, tty: true)
+        #expect(code == 0)
+        #expect(store.saved?.repos.isEmpty == true)
+    }
+
+    @Test func removeAllDeclinedWritesNothing() throws {
+        let existing = Config(repos: [RepoEntry(repoPath: "/a", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--remove-all"], config: existing, confirm: false, tty: true)
+        #expect(code == 0)
+        #expect(store.saved == nil)
+    }
+
+    @Test func removeAllNonTTYWithoutYoloIsAnError() throws {
+        let existing = Config(repos: [RepoEntry(repoPath: "/a", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--remove-all"], config: existing, tty: false)
+        #expect(code == 1)
+        #expect(store.saved == nil)
+    }
+
+    @Test func removeByUUID() throws {
+        let entry = RepoEntry(repoPath: "/a", wipName: "WIP", main: false)
+        let existing = Config(repos: [entry, RepoEntry(repoPath: "/b", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--remove", entry.id.uuidString], config: existing)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == ["/b"])
+    }
+
+    @Test func removeByUnknownUUIDFails() throws {
+        let existing = Config(repos: [RepoEntry(repoPath: "/a", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--remove", UUID().uuidString], config: existing)
+        #expect(code == 1)
+        #expect(store.saved == nil)
+    }
+
+    @Test func idStaysStableAcrossReAdd() throws {
+        let git = FakeGitClient(["/a": .init()])
+        let (code1, store1) = try perform(["--add", "/a"], config: Config(), git: git)
+        #expect(code1 == 0)
+        let firstId = store1.saved?.repos.first?.id
+
+        let (code2, store2) = try perform(["--add", "/a", "--wip-name", "SNAP"], config: store1.saved!, git: git)
+        #expect(code2 == 0)
+        #expect(store2.saved?.repos.first?.id == firstId)
     }
 
     @Test func listPrintsWithoutWriting() throws {

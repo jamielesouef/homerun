@@ -37,7 +37,7 @@ struct Homerun: AsyncParsableCommand {
     @Option(name: [.customShort("a"), .customLong("add"), .long], help: "Add a repo to the config and exit. \".\" means the current folder.")
     var addPath: String?
 
-    @Option(name: [.customShort("r"), .customLong("remove"), .long], help: "Remove a repo from the config and exit. \".\" means the current folder.")
+    @Option(name: [.customShort("r"), .customLong("remove"), .long], help: "Remove a repo from the config and exit, by its id, its path, or \".\" for the current folder.")
     var removePath: String?
 
     @Option(name: [.customShort("m"), .customLong("main")], help: "With --add: push even when the branch is main or master.")
@@ -73,7 +73,7 @@ struct Homerun: AsyncParsableCommand {
         if let defaultWipName { return try setDefaultWipName(defaultWipName, store: store) }
         if let addPath { return try add(addPath, git: git, store: store) }
         if let removePath { return try remove(removePath, store: store) }
-        if removeAll { return try removeAllRepos(store: store) }
+        if removeAll { return try removeAllRepos(store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
         if list { return try printList(store: store) }
         guard sync || dryRun else {
             print(Self.helpMessage())
@@ -105,7 +105,7 @@ struct Homerun: AsyncParsableCommand {
                 return 1
             }
             print()
-            guard confirmer.confirm() else {
+            guard confirmer.confirm(prompt: "Continue? [y/N] ") else {
                 print("Cancelled. Nothing was changed.")
                 return 0
             }
@@ -132,16 +132,20 @@ struct Homerun: AsyncParsableCommand {
 
     private func add(_ rawPath: String, git: any GitClient, store: any ConfigStore) throws -> Int32 {
         let path = resolved(rawPath)
+        if path != rawPath { print("Resolved \"\(rawPath)\" to \(path)") }
         var config = try store.load() ?? Config()
         let wip = wipName ?? config.defaultWipName ?? "WIP"
 
         if recursive {
             let root = NSString(string: path).expandingTildeInPath
+            print("Walking \(root) for git repos...")
             let found = Self.findRepos(in: root, git: git)
             guard !found.isEmpty else {
                 print("error: no git repos found under \(path).")
                 return 1
             }
+            print("Found \(found.count) repo\(found.count == 1 ? "" : "s"):")
+            for repoPath in found { print("  \(repoPath)") }
             for repoPath in found {
                 config.upsert(RepoEntry(repoPath: repoPath, wipName: wip, main: allowMain))
             }
@@ -150,6 +154,7 @@ struct Homerun: AsyncParsableCommand {
             return 0
         }
 
+        print("Checking \(path) is a git repo...")
         let entry = RepoEntry(repoPath: path, wipName: wip, main: allowMain)
         guard git.isRepo(at: entry.expandedPath) else {
             print("error: \(path) is not a git repo.")
@@ -157,13 +162,27 @@ struct Homerun: AsyncParsableCommand {
         }
         config.upsert(entry)
         try store.save(config)
-        print("Added \(path)")
+        let id = config.repos.first(where: { $0.canonicalPath == entry.canonicalPath })?.id ?? entry.id
+        print("Added \(path) (id: \(id))")
         return 0
     }
 
-    private func remove(_ rawPath: String, store: any ConfigStore) throws -> Int32 {
-        let path = resolved(rawPath)
+    // Accepts either a repo's id or its path ("." for the current folder).
+    private func remove(_ raw: String, store: any ConfigStore) throws -> Int32 {
         var config = try store.load() ?? Config()
+
+        if let id = UUID(uuidString: raw) {
+            let removed = config.repos.first { $0.id == id }
+            guard config.remove(id: id) else {
+                print("error: no repo with id \(raw).")
+                return 1
+            }
+            try store.save(config)
+            print("Removed \(removed?.repoPath ?? raw) (id: \(id))")
+            return 0
+        }
+
+        let path = resolved(raw)
         guard config.remove(path: path) else {
             print("error: \(path) is not in the config.")
             return 1
@@ -173,9 +192,23 @@ struct Homerun: AsyncParsableCommand {
         return 0
     }
 
-    private func removeAllRepos(store: any ConfigStore) throws -> Int32 {
+    private func removeAllRepos(store: any ConfigStore, confirmer: any Confirmer, stdinIsTTY: Bool) throws -> Int32 {
         var config = try store.load() ?? Config()
         let count = config.repos.count
+        guard count > 0 else {
+            print("No repos configured.")
+            return 0
+        }
+        if !yolo {
+            guard stdinIsTTY else {
+                print("Not a TTY — pass --yes to run unattended.")
+                return 1
+            }
+            guard confirmer.confirm(prompt: "Remove all \(count) repo\(count == 1 ? "" : "s")? [y/N] ") else {
+                print("Cancelled. Nothing was changed.")
+                return 0
+            }
+        }
         config.repos.removeAll()
         try store.save(config)
         print("Removed \(count) repo\(count == 1 ? "" : "s").")
@@ -189,7 +222,7 @@ struct Homerun: AsyncParsableCommand {
             return 0
         }
         for entry in config.repos {
-            print("  \(entry.repoPath)  (wip: \(entry.wipName), main: \(entry.main))")
+            print("  \(entry.repoPath)  (id: \(entry.id), wip: \(entry.wipName), main: \(entry.main))")
         }
         return 0
     }
