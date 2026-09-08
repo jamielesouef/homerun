@@ -11,6 +11,8 @@ permissions:
 jobs:
   release:
     runs-on: macos-15
+    env:
+      TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,28 +37,28 @@ jobs:
       - name: Zip
         run: |
           cd dist
-          zip "homerun-${{ github.ref_name }}-macos.zip" homerun
+          zip "homerun-${TAG}-macos.zip" homerun
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" \
-            "dist/homerun-${{ github.ref_name }}-macos.zip" \
-            --title "${{ github.ref_name }}" \
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" \
+            "dist/homerun-${TAG}-macos.zip" \
+            --title "$TAG" \
             --generate-notes
 
       - name: Bump homebrew-tap formula
         env:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
-          SHA256=$(shasum -a 256 "dist/homerun-${{ github.ref_name }}-macos.zip" | cut -d' ' -f1)
+          SHA256=$(shasum -a 256 "dist/homerun-${TAG}-macos.zip" | cut -d' ' -f1)
           git clone "https://x-access-token:${GH_TOKEN}@github.com/jamielesouef/homebrew-tap.git" tap
-          printf 'class Homerun < Formula\n  desc "WIP-commit and push every dirty repo before you head home"\n  homepage "https://github.com/jamielesouef/homerun"\n  url "https://github.com/jamielesouef/homerun/releases/download/%s/homerun-%s-macos.zip"\n  sha256 "%s"\n  license "MIT"\n\n  def install\n    bin.install "homerun"\n  end\n\n  test do\n    system "#{bin}/homerun"\n  end\nend\n' \
-            "${{ github.ref_name }}" "${{ github.ref_name }}" "$SHA256" > tap/Formula/homerun.rb
+          printf 'class Homerun < Formula\n  desc "WIP-commit and push every dirty repo before you head home"\n  homepage "https://github.com/jamielesouef/homerun"\n  url "https://github.com/jamielesouef/homerun/releases/download/%s/homerun-%s-macos.zip"\n  sha256 "%s"\n  license "MIT"\n  depends_on macos: :ventura\n\n  def install\n    bin.install "homerun"\n  end\n\n  test do\n    system "#{bin}/homerun"\n  end\nend\n' \
+            "$TAG" "$TAG" "$SHA256" > tap/Formula/homerun.rb
           cd tap
           git config user.name "homerun-release-bot"
           git config user.email "actions@github.com"
           git add Formula/homerun.rb
-          git commit -m "Bump homerun to ${{ github.ref_name }}"
+          git commit -m "Bump homerun to ${TAG}"
           git push
