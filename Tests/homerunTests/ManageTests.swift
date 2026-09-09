@@ -166,4 +166,62 @@ struct ManageTests {
     @Test func recursiveWithoutAddIsRejected() {
         #expect(throws: (any Error).self) { try Homerun.parse(["--recursive"]) }
     }
+
+    @Test func purgeRemovesOnlyMissingReposWithYolo() throws {
+        let git = FakeGitClient(["/a": .init()])
+        let existing = Config(repos: [
+            RepoEntry(repoPath: "/a", wipName: "WIP", main: false),
+            RepoEntry(repoPath: "/gone", wipName: "WIP", main: false),
+        ])
+        let (code, store) = try perform(["--purge", "--yolo"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == ["/a"])
+    }
+
+    @Test func purgeWithNothingMissingWritesNothing() throws {
+        let git = FakeGitClient(["/a": .init()])
+        let existing = Config(repos: [RepoEntry(repoPath: "/a", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--purge", "--yolo"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved == nil)
+    }
+
+    @Test func purgeDeclinedWritesNothing() throws {
+        let existing = Config(repos: [RepoEntry(repoPath: "/gone", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--purge"], config: existing, confirm: false, tty: true)
+        #expect(code == 0)
+        #expect(store.saved == nil)
+    }
+
+    @Test func purgeNonTTYWithoutYoloIsAnError() throws {
+        let existing = Config(repos: [RepoEntry(repoPath: "/gone", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--purge"], config: existing, tty: false)
+        #expect(code == 1)
+        #expect(store.saved == nil)
+    }
+
+    @Test func recursiveAddAlsoPurgesMissingTrackedRepos() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-recursive-\(UUID().uuidString)")
+        let repoA = root.appendingPathComponent("a")
+        try FileManager.default.createDirectory(at: repoA, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let git = FakeGitClient([repoA.path: .init()])
+        let existing = Config(repos: [RepoEntry(repoPath: "/gone", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == [repoA.path])
+    }
+
+    @Test func recursiveAddPurgesEvenWithNothingNewFound() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-recursive-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let git = FakeGitClient([:])
+        let existing = Config(repos: [RepoEntry(repoPath: "/gone", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.isEmpty == true)
+    }
 }
