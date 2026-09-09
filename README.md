@@ -35,7 +35,7 @@ homerun --dry-run                           # same as --sync --dry-run
 homerun --sync --repo "~/dev/foo"           # limit to one repo, repeatable
 homerun --add "~/dev/foo" --main false      # or: homerun -a ~/dev/foo -m false
 homerun --add .                             # "." resolves to the current folder
-homerun --add ~/dev --recursive             # walk the tree, add every repo found
+homerun --add ~/dev --recursive             # walk the tree, add every repo found, purge tracked repos whose path is gone
 homerun --main true                         # set main for the repo you are standing in
 homerun --remove .                          # or by id: homerun --remove <uuid>
 homerun --remove-all                        # asks to confirm; drop every tracked repo

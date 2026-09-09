@@ -31,7 +31,7 @@ struct Homerun: AsyncParsableCommand {
     @Flag(name: [.customShort("u"), .long], help: "Remove every tracked repo whose path no longer exists on disk.")
     var purge = false
 
-    @Flag(name: [.customShort("R"), .long], help: "With --add: walk the directory tree and add every git repo found.")
+    @Flag(name: [.customShort("R"), .long], help: "With --add: walk the directory tree, add every git repo found, and purge any tracked repo whose path no longer exists.")
     var recursive = false
 
     @Option(name: [.customShort("p"), .long], help: "Limit the scan to this configured repo. Repeatable.")
@@ -145,17 +145,29 @@ struct Homerun: AsyncParsableCommand {
             let root = NSString(string: path).expandingTildeInPath
             print("🔎 Walking \(root) for git repos...")
             let found = Self.findRepos(in: root, git: git)
-            guard !found.isEmpty else {
+            if !found.isEmpty {
+                print("📁 Found \(found.count) repo\(found.count == 1 ? "" : "s"):")
+                for repoPath in found { print("   " + Style.paint(repoPath, "2")) }
+                for repoPath in found {
+                    config.upsert(RepoEntry(repoPath: repoPath, wipName: wip, main: allowMain ?? false))
+                }
+            }
+            let missing = missingEntries(in: config, git: git)
+            if !missing.isEmpty {
+                let missingIds = Set(missing.map(\.id))
+                config.repos.removeAll { missingIds.contains($0.id) }
+            }
+            guard !found.isEmpty || !missing.isEmpty else {
                 print(Style.paint("❌ No git repos found under \(path).", "31"))
                 return 1
             }
-            print("📁 Found \(found.count) repo\(found.count == 1 ? "" : "s"):")
-            for repoPath in found { print("   " + Style.paint(repoPath, "2")) }
-            for repoPath in found {
-                config.upsert(RepoEntry(repoPath: repoPath, wipName: wip, main: allowMain ?? false))
-            }
             try store.save(config)
-            print(Style.paint("✅ Added \(found.count) repo\(found.count == 1 ? "" : "s") under \(path)", "32"))
+            if !found.isEmpty {
+                print(Style.paint("✅ Added \(found.count) repo\(found.count == 1 ? "" : "s") under \(path)", "32"))
+            }
+            if !missing.isEmpty {
+                print(Style.paint("🗑️  Purged \(missing.count) repo\(missing.count == 1 ? "" : "s") no longer on disk.", "32"))
+            }
             return 0
         }
 
@@ -220,9 +232,13 @@ struct Homerun: AsyncParsableCommand {
         return 0
     }
 
+    private func missingEntries(in config: Config, git: any GitClient) -> [RepoEntry] {
+        config.repos.filter { !git.isRepo(at: $0.expandedPath) }
+    }
+
     private func purgeMissing(git: any GitClient, store: any ConfigStore, confirmer: any Confirmer, stdinIsTTY: Bool) throws -> Int32 {
         var config = try store.load() ?? Config()
-        let missing = config.repos.filter { !git.isRepo(at: $0.expandedPath) }
+        let missing = missingEntries(in: config, git: git)
         guard !missing.isEmpty else {
             print("📭 No missing repos.")
             return 0
