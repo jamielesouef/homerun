@@ -166,4 +166,37 @@ struct ManageTests {
     @Test func recursiveWithoutAddIsRejected() {
         #expect(throws: (any Error).self) { try Homerun.parse(["--recursive"]) }
     }
+
+    @Test func purgeRemovesOnlyMissingReposWithYolo() throws {
+        let git = FakeGitClient(["/a": .init()])
+        let existing = Config(repos: [
+            RepoEntry(repoPath: "/a", wipName: "WIP", main: false),
+            RepoEntry(repoPath: "/gone", wipName: "WIP", main: false),
+        ])
+        let (code, store) = try perform(["--purge", "--yolo"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == ["/a"])
+    }
+
+    @Test func purgeWithNothingMissingWritesNothing() throws {
+        let git = FakeGitClient(["/a": .init()])
+        let existing = Config(repos: [RepoEntry(repoPath: "/a", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--purge", "--yolo"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved == nil)
+    }
+
+    @Test func purgeDeclinedWritesNothing() throws {
+        let existing = Config(repos: [RepoEntry(repoPath: "/gone", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--purge"], config: existing, confirm: false, tty: true)
+        #expect(code == 0)
+        #expect(store.saved == nil)
+    }
+
+    @Test func purgeNonTTYWithoutYoloIsAnError() throws {
+        let existing = Config(repos: [RepoEntry(repoPath: "/gone", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--purge"], config: existing, tty: false)
+        #expect(code == 1)
+        #expect(store.saved == nil)
+    }
 }

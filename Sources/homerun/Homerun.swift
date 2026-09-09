@@ -28,6 +28,9 @@ struct Homerun: AsyncParsableCommand {
     @Flag(name: [.customShort("A"), .long], help: "Remove every repo from the config.")
     var removeAll = false
 
+    @Flag(name: [.customShort("u"), .long], help: "Remove every tracked repo whose path no longer exists on disk.")
+    var purge = false
+
     @Flag(name: [.customShort("R"), .long], help: "With --add: walk the directory tree and add every git repo found.")
     var recursive = false
 
@@ -75,6 +78,7 @@ struct Homerun: AsyncParsableCommand {
         if let removePath { return try remove(removePath, store: store) }
         if let allowMain { return try setMain(allowMain, store: store) }
         if removeAll { return try removeAllRepos(store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
+        if purge { return try purgeMissing(git: git, store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
         if list { return try printList(store: store) }
         guard sync || dryRun else {
             print(Self.helpMessage())
@@ -213,6 +217,32 @@ struct Homerun: AsyncParsableCommand {
         config.repos.removeAll()
         try store.save(config)
         print(Style.paint("🗑️  Removed \(count) repo\(count == 1 ? "" : "s").", "32"))
+        return 0
+    }
+
+    private func purgeMissing(git: any GitClient, store: any ConfigStore, confirmer: any Confirmer, stdinIsTTY: Bool) throws -> Int32 {
+        var config = try store.load() ?? Config()
+        let missing = config.repos.filter { !git.isRepo(at: $0.expandedPath) }
+        guard !missing.isEmpty else {
+            print("📭 No missing repos.")
+            return 0
+        }
+        print("👻 \(missing.count) repo\(missing.count == 1 ? "" : "s") no longer on disk:")
+        for entry in missing { print("   " + Style.paint(entry.repoPath, "2")) }
+        if !yolo {
+            guard stdinIsTTY else {
+                print(Style.paint("❌ Not a TTY — pass --yes to run unattended.", "31"))
+                return 1
+            }
+            guard confirmer.confirm(prompt: "🗑️  Remove \(missing.count) missing repo\(missing.count == 1 ? "" : "s")? [y/N] ") else {
+                print("🙅 Cancelled. Nothing was changed.")
+                return 0
+            }
+        }
+        let missingIds = Set(missing.map(\.id))
+        config.repos.removeAll { missingIds.contains($0.id) }
+        try store.save(config)
+        print(Style.paint("🗑️  Purged \(missing.count) repo\(missing.count == 1 ? "" : "s").", "32"))
         return 0
     }
 
