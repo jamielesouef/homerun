@@ -37,7 +37,9 @@ struct RepoEntry: Codable, Equatable, Sendable, Identifiable {
     }
 
     // Duplicate detection compares this; the stored `repoPath` stays as typed.
+    // Symlinks are resolved so ~/Developer/foo and /Volumes/Disk/Developer/foo,
+    // when one is a symlink to the other, are recognised as the same repo.
     var canonicalPath: String {
-        URL(fileURLWithPath: expandedPath).standardizedFileURL.path
+        URL(fileURLWithPath: expandedPath).standardizedFileURL.resolvingSymlinksInPath().path
     }
 }

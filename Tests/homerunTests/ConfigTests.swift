@@ -69,4 +69,24 @@ struct ConfigTests {
         let again = try #require(try store.load())
         #expect(again.repos.first?.id == loaded.repos.first?.id)
     }
+
+    // The bug that filled the config with duplicates: ~/Developer was a symlink to
+    // /Volumes/S990/Developer, so the same repo was tracked under both spellings.
+    @Test func canonicalPathSeesThroughASymlink() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-symlink-\(UUID().uuidString)")
+        let real = root.appendingPathComponent("real")
+        let link = root.appendingPathComponent("link")
+        try FileManager.default.createDirectory(at: real, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let viaReal = RepoEntry(repoPath: real.path, wipName: "WIP", main: false)
+        let viaLink = RepoEntry(repoPath: link.path, wipName: "WIP", main: false)
+        #expect(viaReal.canonicalPath == viaLink.canonicalPath)
+
+        var config = Config(repos: [viaReal])
+        config.upsert(viaLink)
+        #expect(config.repos.count == 1)
+        #expect(config.repos.first?.id == viaReal.id)
+    }
 }
