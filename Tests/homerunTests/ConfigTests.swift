@@ -89,4 +89,16 @@ struct ConfigTests {
         #expect(config.repos.count == 1)
         #expect(config.repos.first?.id == viaReal.id)
     }
+
+    @Test func dedupeReturnsTheEntriesItDropped() {
+        var config = Config(repos: [
+            RepoEntry(repoPath: "/tmp", wipName: "WIP", main: false),
+            RepoEntry(repoPath: "/private/tmp", wipName: "WIP", main: false),
+            RepoEntry(repoPath: "/b", wipName: "WIP", main: false),
+        ])
+        let dropped = config.dedupe()
+        #expect(dropped.map(\.repoPath) == ["/private/tmp"])
+        #expect(config.repos.map(\.repoPath) == ["/tmp", "/b"])
+        #expect(config.dedupe().isEmpty)
+    }
 }

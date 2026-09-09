@@ -31,7 +31,10 @@ struct Homerun: AsyncParsableCommand {
     @Flag(name: [.customShort("u"), .long], help: "Remove every tracked repo whose path no longer exists on disk.")
     var purge = false
 
-    @Flag(name: [.customShort("R"), .long], help: "With --add: walk the directory tree, add every git repo found, and purge any tracked repo whose path no longer exists.")
+    @Flag(name: [.customShort("D"), .long], help: "Remove duplicate repos from the config, keeping one entry per repo.")
+    var dedupe = false
+
+    @Flag(name: [.customShort("R"), .long], help: "With --add: walk the directory tree, add every git repo found, purge any tracked repo whose path no longer exists, and drop any duplicate entries.")
     var recursive = false
 
     @Option(name: [.customShort("p"), .long], help: "Limit the scan to this configured repo. Repeatable.")
@@ -79,6 +82,7 @@ struct Homerun: AsyncParsableCommand {
         if let allowMain { return try setMain(allowMain, store: store) }
         if removeAll { return try removeAllRepos(store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
         if purge { return try purgeMissing(git: git, store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
+        if dedupe { return try dedupeRepos(store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
         if list { return try printList(store: store) }
         guard sync || dryRun else {
             print(Self.helpMessage())
@@ -167,7 +171,8 @@ struct Homerun: AsyncParsableCommand {
                 let missingIds = Set(missing.map(\.id))
                 config.repos.removeAll { missingIds.contains($0.id) }
             }
-            guard !found.isEmpty || !missing.isEmpty else {
+            let duplicates = config.dedupe()
+            guard !found.isEmpty || !missing.isEmpty || !duplicates.isEmpty else {
                 print(Style.paint("❌ No git repos found under \(path).", "31"))
                 return 1
             }
@@ -178,6 +183,9 @@ struct Homerun: AsyncParsableCommand {
             if !missing.isEmpty {
                 print(Style.paint("🗑️  Purged \(missing.count) repo\(missing.count == 1 ? "" : "s") no longer on disk.", "32"))
             }
+            if !duplicates.isEmpty {
+                print(Style.paint("👯 Dropped \(duplicates.count) duplicate entr\(duplicates.count == 1 ? "y" : "ies").", "32"))
+            }
             return 0
         }
 
@@ -187,10 +195,12 @@ struct Homerun: AsyncParsableCommand {
             print(Style.paint("❌ \(path) is not a git repo.", "31"))
             return 1
         }
+        let alreadyTracked = config.repos.contains { $0.canonicalPath == entry.canonicalPath }
         config.upsert(entry)
         try store.save(config)
         let id = config.repos.first(where: { $0.canonicalPath == entry.canonicalPath })?.id ?? entry.id
-        print(Style.paint("✅ Added \(path)", "32") + "  " + Style.paint("(\(id))", "2"))
+        let headline = alreadyTracked ? "🔁 Already tracked, updated \(path)" : "✅ Added \(path)"
+        print(Style.paint(headline, "32") + "  " + Style.paint("(\(id))", "2"))
         return 0
     }
 
@@ -269,6 +279,35 @@ struct Homerun: AsyncParsableCommand {
         config.repos.removeAll { missingIds.contains($0.id) }
         try store.save(config)
         print(Style.paint("🗑️  Purged \(missing.count) repo\(missing.count == 1 ? "" : "s").", "32"))
+        return 0
+    }
+
+    private func dedupeRepos(store: any ConfigStore, confirmer: any Confirmer, stdinIsTTY: Bool) throws -> Int32 {
+        var config = try store.load() ?? Config()
+        let groups = config.duplicateGroups()
+        guard !groups.isEmpty else {
+            print("📭 No duplicate repos.")
+            return 0
+        }
+        let count = groups.reduce(0) { $0 + $1.dropped.count }
+        print("👯 \(groups.count) repo\(groups.count == 1 ? "" : "s") tracked more than once:")
+        for group in groups {
+            print("   " + Style.paint("keep ", "2") + group.kept.repoPath)
+            for entry in group.dropped { print("   " + Style.paint("drop " + entry.repoPath, "2")) }
+        }
+        if !yolo {
+            guard stdinIsTTY else {
+                print(Style.paint("❌ Not a TTY — pass --yes to run unattended.", "31"))
+                return 1
+            }
+            guard confirmer.confirm(prompt: "🗑️  Remove \(count) duplicate entr\(count == 1 ? "y" : "ies")? [y/N] ") else {
+                print("🙅 Cancelled. Nothing was changed.")
+                return 0
+            }
+        }
+        _ = config.dedupe()
+        try store.save(config)
+        print(Style.paint("🗑️  Removed \(count) duplicate entr\(count == 1 ? "y" : "ies").", "32"))
         return 0
     }
 
