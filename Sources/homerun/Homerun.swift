@@ -135,11 +135,21 @@ struct Homerun: AsyncParsableCommand {
         return entries.filter { wanted.contains($0.canonicalPath) }
     }
 
+    // Re-adding a tracked repo keeps its `main` and `wipName` unless the flag was passed,
+    // so `--add --recursive` over a tree cannot quietly reset them.
+    private func entry(for path: String, in config: Config) -> RepoEntry {
+        let key = RepoEntry(repoPath: path, wipName: "", main: false).canonicalPath
+        let existing = config.repos.first { $0.canonicalPath == key }
+        return RepoEntry(
+            repoPath: path,
+            wipName: wipName ?? existing?.wipName ?? config.defaultWipName ?? "WIP",
+            main: allowMain ?? existing?.main ?? false)
+    }
+
     private func add(_ rawPath: String, git: any GitClient, store: any ConfigStore) throws -> Int32 {
         let path = resolved(rawPath)
         if path != rawPath { print("📍 Resolved \"\(rawPath)\" to \(path)") }
         var config = try store.load() ?? Config()
-        let wip = wipName ?? config.defaultWipName ?? "WIP"
 
         if recursive {
             let root = NSString(string: path).expandingTildeInPath
@@ -149,7 +159,7 @@ struct Homerun: AsyncParsableCommand {
                 print("📁 Found \(found.count) repo\(found.count == 1 ? "" : "s"):")
                 for repoPath in found { print("   " + Style.paint(repoPath, "2")) }
                 for repoPath in found {
-                    config.upsert(RepoEntry(repoPath: repoPath, wipName: wip, main: allowMain ?? false))
+                    config.upsert(entry(for: repoPath, in: config))
                 }
             }
             let missing = missingEntries(in: config, git: git)
@@ -172,7 +182,7 @@ struct Homerun: AsyncParsableCommand {
         }
 
         print("🔍 Checking \(path) is a git repo...")
-        let entry = RepoEntry(repoPath: path, wipName: wip, main: allowMain ?? false)
+        let entry = entry(for: path, in: config)
         guard git.isRepo(at: entry.expandedPath) else {
             print(Style.paint("❌ \(path) is not a git repo.", "31"))
             return 1

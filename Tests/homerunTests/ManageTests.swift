@@ -224,4 +224,38 @@ struct ManageTests {
         #expect(code == 0)
         #expect(store.saved?.repos.isEmpty == true)
     }
+
+    @Test func reAddKeepsMainAndWipNameWhenNoFlagIsPassed() throws {
+        let git = FakeGitClient(["/tmp": .init(), "/private/tmp": .init()])
+        let existing = Config(repos: [RepoEntry(repoPath: "/tmp", wipName: "Save", main: true)])
+        let (code, store) = try perform(["--add", "/private/tmp"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.count == 1)
+        #expect(store.saved?.repos.first?.main == true)
+        #expect(store.saved?.repos.first?.wipName == "Save")
+    }
+
+    @Test func reAddStillHonoursAnExplicitMainFlag() throws {
+        let git = FakeGitClient(["/tmp": .init(), "/private/tmp": .init()])
+        let existing = Config(repos: [RepoEntry(repoPath: "/tmp", wipName: "Save", main: true)])
+        let (code, store) = try perform(["--add", "/private/tmp", "--main", "false"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.first?.main == false)
+        #expect(store.saved?.repos.first?.wipName == "Save")
+    }
+
+    @Test func recursiveAddKeepsMainOnAlreadyTrackedRepos() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-keepmain-\(UUID().uuidString)")
+        let repoA = root.appendingPathComponent("a")
+        try FileManager.default.createDirectory(at: repoA, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let git = FakeGitClient([repoA.path: .init()])
+        let existing = Config(repos: [RepoEntry(repoPath: repoA.path, wipName: "Save", main: true)])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.count == 1)
+        #expect(store.saved?.repos.first?.main == true)
+        #expect(store.saved?.repos.first?.wipName == "Save")
+    }
 }
