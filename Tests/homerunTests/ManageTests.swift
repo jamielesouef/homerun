@@ -1,3 +1,4 @@
+//
 //  ManageTests.swift
 //  homerun
 //
@@ -165,6 +166,22 @@ struct ManageTests {
 
     @Test func recursiveWithoutAddIsRejected() {
         #expect(throws: (any Error).self) { try Homerun.parse(["--recursive"]) }
+    }
+
+    // A symlink pointing back at an ancestor once hung the walk forever; the
+    // canonical-path visited set must break the cycle and still return the repo.
+    @Test func recursiveAddTerminatesOnASymlinkCycle() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-cycle-\(UUID().uuidString)")
+        let repoA = root.appendingPathComponent("a")
+        let loop = root.appendingPathComponent("loop")
+        try FileManager.default.createDirectory(at: repoA, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: loop, withDestinationURL: root)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let git = FakeGitClient([repoA.path: .init()])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: Config(), git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == [repoA.path])
     }
 
     @Test func purgeRemovesOnlyMissingReposWithYolo() throws {

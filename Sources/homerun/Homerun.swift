@@ -1,3 +1,4 @@
+//
 //  Homerun.swift
 //  homerun
 //
@@ -354,8 +355,15 @@ struct Homerun: AsyncParsableCommand {
     }
 
     // Descends until it finds a repo, then stops — nested/submodule repos below it are not walked.
-    // ponytail: follows symlinked directories as-is; a symlink cycle would loop forever.
+    // Follows symlinked directories, but a canonical-path visited set breaks any symlink cycle.
     private static func findRepos(in root: String, git: any GitClient) -> [String] {
+        var visited: Set<String> = []
+        return findRepos(in: root, git: git, visited: &visited)
+    }
+
+    private static func findRepos(in root: String, git: any GitClient, visited: inout Set<String>) -> [String] {
+        let canonical = URL(fileURLWithPath: root).resolvingSymlinksInPath().path
+        guard visited.insert(canonical).inserted else { return [] }
         if git.isRepo(at: root) { return [root] }
         guard let children = try? FileManager.default.contentsOfDirectory(atPath: root) else { return [] }
         var found: [String] = []
@@ -363,7 +371,7 @@ struct Homerun: AsyncParsableCommand {
             let path = root + "/" + child
             var isDirectory: ObjCBool = false
             guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else { continue }
-            found += findRepos(in: path, git: git)
+            found += findRepos(in: path, git: git, visited: &visited)
         }
         return found
     }
