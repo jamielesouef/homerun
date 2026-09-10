@@ -14,8 +14,8 @@ struct Homerun: AsyncParsableCommand {
         abstract: "WIP-commit and push every tracked repo so work is never stranded on one machine."
     )
 
-    @Flag(name: [.customShort("s"), .long], help: "Scan every tracked repo, show the plan, and push what needs it.")
-    var sync = false
+    @Flag(name: [.customShort("s"), .customLong("wip"), .customLong("sync")], help: "Scan every tracked repo, show the plan, and push what needs it.")
+    var wip = false
 
     @Flag(name: [.customShort("d"), .long], help: "Show the plan and exit. Never prompts, never writes.")
     var dryRun = false
@@ -70,13 +70,19 @@ struct Homerun: AsyncParsableCommand {
             git: ProcessGitClient(),
             store: JSONConfigStore(),
             confirmer: ReadLineConfirmer(),
-            stdinIsTTY: isatty(STDIN_FILENO) != 0
+            auth: ProcessGitHubAuth(),
+            stdinIsTTY: isatty(STDIN_FILENO) != 0,
+            showProgress: isatty(STDOUT_FILENO) != 0
         )
         if code != 0 { throw ExitCode(code) }
     }
 
     // The whole decision flow, with every side-effecting dependency injected so tests can drive it.
-    func perform(git: any GitClient, store: any ConfigStore, confirmer: any Confirmer, stdinIsTTY: Bool) throws -> Int32 {
+    // `auth` defaults to nil and `showProgress` to false so existing tests need no change.
+    func perform(
+        git: any GitClient, store: any ConfigStore, confirmer: any Confirmer,
+        auth: (any GitHubAuth)? = nil, stdinIsTTY: Bool, showProgress: Bool = false
+    ) throws -> Int32 {
         if let defaultWipName { return try setDefaultWipName(defaultWipName, store: store) }
         if let addPath { return try add(addPath, git: git, store: store) }
         if let removePath { return try remove(removePath, store: store) }
@@ -85,20 +91,29 @@ struct Homerun: AsyncParsableCommand {
         if purge { return try purgeMissing(git: git, store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
         if dedupe { return try dedupeRepos(store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
         if list { return try printList(store: store) }
-        guard sync || dryRun else {
+        guard wip || dryRun else {
             print(Self.helpMessage())
             return 0
         }
-        return try runSync(git: git, store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY)
+        return try runSync(git: git, store: store, confirmer: confirmer, auth: auth, stdinIsTTY: stdinIsTTY, showProgress: showProgress)
     }
 
-    private func runSync(git: any GitClient, store: any ConfigStore, confirmer: any Confirmer, stdinIsTTY: Bool) throws -> Int32 {
+    private func runSync(
+        git: any GitClient, store: any ConfigStore, confirmer: any Confirmer,
+        auth: (any GitHubAuth)?, stdinIsTTY: Bool, showProgress: Bool
+    ) throws -> Int32 {
         guard let config = try store.load(), !config.repos.isEmpty else {
             print("📭 No repos configured. Add one with --add <path>.")
             return 0
         }
         guard let entries = try filtered(config.repos) else { return 1 }
-        let plans = RepoPlan.scan(entries, git: git)
+        if showProgress {
+            print("Scanning \(entries.count) \(entries.count == 1 ? "repo" : "repos")...")
+        }
+        let plans = entries.map { entry -> RepoPlan in
+            if showProgress { print(Style.paint("  … \(entry.name)", "2")) }
+            return RepoPlan.scan(entry, git: git)
+        }
         let pending = plans.filter(\.status.needsPush)
         let scanFailed = plans.contains(where: \.status.isFailed)
         if pending.isEmpty, !scanFailed {
@@ -120,7 +135,18 @@ struct Homerun: AsyncParsableCommand {
                 return 0
             }
         }
-        let results = RepoResult.execute(plans, git: git)
+        if showProgress { print() }
+        let results = RepoResult.execute(plans, git: git, auth: auth) { event in
+            guard showProgress else { return }
+            switch event {
+            case .started(let name):
+                print(Style.paint("  ↑ \(name)…", "2"))
+            case .switchingAccount(let name, let account):
+                print(Style.paint("    ↺ \(name): retrying as \(account)", "33"))
+            case .finished:
+                break
+            }
+        }
         print()
         Row.render(results: results).forEach { print(Style.apply($0)) }
         print("\n\(Row.summary(results: results))")

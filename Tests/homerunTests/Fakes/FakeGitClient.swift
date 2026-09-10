@@ -15,13 +15,19 @@ final class FakeGitClient: GitClient, @unchecked Sendable {
         var upstream: String? = "origin/feat"
         var ahead = 0
         var pushError: String?
+        // When set, push fails with a permission error unless `auth`'s active
+        // account matches this — the multi-account gh-switch scenario.
+        var requiredAccount: String?
     }
 
     var repos: [String: Repo]
     private(set) var calls: [String] = []
+    // Optional link to the auth fake so a push can consult the active account.
+    var auth: FakeGitHubAuth?
 
-    init(_ repos: [String: Repo]) {
+    init(_ repos: [String: Repo], auth: FakeGitHubAuth? = nil) {
         self.repos = repos
+        self.auth = auth
     }
 
     func isRepo(at path: String) -> Bool { repos[path] != nil }
@@ -40,7 +46,11 @@ final class FakeGitClient: GitClient, @unchecked Sendable {
 
     func push(at path: String, branch: String, setUpstream: Bool) throws {
         calls.append("push \(path) \(branch)\(setUpstream ? " -u" : "")")
-        if let error = try repo(path).pushError { throw GitError(message: error) }
+        let repo = try repo(path)
+        if let required = repo.requiredAccount, auth?.activeAccount() != required {
+            throw GitError(message: "remote: Permission denied to this repository")
+        }
+        if let error = repo.pushError { throw GitError(message: error) }
     }
 
     private func repo(_ path: String) throws -> Repo {

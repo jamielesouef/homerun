@@ -47,8 +47,13 @@ extension Row {
 
     static func summary(results: [RepoResult]) -> String {
         let outcomes = results.map(\.outcome)
+        let pushed = outcomes.filter {
+            if case .pushed = $0 { return true }
+            if case .pushedAfterSwitch = $0 { return true }
+            return false
+        }.count
         return joinCounts([
-            (outcomes.filter { if case .pushed = $0 { true } else { false } }.count, "pushed"),
+            (pushed, "pushed"),
             (outcomes.filter { $0 == .skipped }.count, "skipped"),
             (outcomes.filter { if case .failed = $0 { true } else { false } }.count, "failed"),
         ])
@@ -78,6 +83,8 @@ extension Row {
         switch result.outcome {
         case .pushed(let target):
             return Cell(symbol: "✓", name: name, detail: "pushed → \(target)", kind: .pushed)
+        case .pushedAfterSwitch(let target, let account):
+            return Cell(symbol: "✓", name: name, detail: "pushed → \(target) (as \(account))", kind: .pushed)
         case .skipped:
             return Cell(symbol: "⊘", name: name, detail: "skipped", kind: .pending)
         case .failed(let reason):
