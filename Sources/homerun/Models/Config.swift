@@ -1,3 +1,4 @@
+//
 //  Config.swift
 //  homerun
 //
@@ -19,6 +20,40 @@ struct Config: Codable, Equatable, Sendable {
             repos[index] = updated
         } else {
             repos.append(entry)
+        }
+    }
+
+    // Collapses entries that point at the same repo, keeping the first of each group
+    // (so ids do not churn) and ORing `main` in, because dropping a `main: true`
+    // would silently stop that repo being pushed. Returns the entries dropped.
+    mutating func dedupe() -> [RepoEntry] {
+        var kept: [RepoEntry] = []
+        var indexByPath: [String: Int] = [:]
+        var dropped: [RepoEntry] = []
+        for entry in repos {
+            if let index = indexByPath[entry.canonicalPath] {
+                kept[index].main = kept[index].main || entry.main
+                dropped.append(entry)
+            } else {
+                indexByPath[entry.canonicalPath] = kept.count
+                kept.append(entry)
+            }
+        }
+        repos = kept
+        return dropped
+    }
+
+    // Every group with more than one entry, as (kept, dropped) pairs, for reporting.
+    func duplicateGroups() -> [(kept: RepoEntry, dropped: [RepoEntry])] {
+        var order: [String] = []
+        var groups: [String: [RepoEntry]] = [:]
+        for entry in repos {
+            if groups[entry.canonicalPath] == nil { order.append(entry.canonicalPath) }
+            groups[entry.canonicalPath, default: []].append(entry)
+        }
+        return order.compactMap { path in
+            guard let group = groups[path], group.count > 1 else { return nil }
+            return (kept: group[0], dropped: Array(group.dropFirst()))
         }
     }
 

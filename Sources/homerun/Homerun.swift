@@ -1,3 +1,4 @@
+//
 //  Homerun.swift
 //  homerun
 //
@@ -31,7 +32,10 @@ struct Homerun: AsyncParsableCommand {
     @Flag(name: [.customShort("u"), .long], help: "Remove every tracked repo whose path no longer exists on disk.")
     var purge = false
 
-    @Flag(name: [.customShort("R"), .long], help: "With --add: walk the directory tree, add every git repo found, and purge any tracked repo whose path no longer exists.")
+    @Flag(name: [.customShort("D"), .long], help: "Remove duplicate repos from the config, keeping one entry per repo.")
+    var dedupe = false
+
+    @Flag(name: [.customShort("R"), .long], help: "With --add: walk the directory tree, add every git repo found, purge any tracked repo whose path no longer exists, and drop any duplicate entries.")
     var recursive = false
 
     @Option(name: [.customShort("p"), .long], help: "Limit the scan to this configured repo. Repeatable.")
@@ -79,6 +83,7 @@ struct Homerun: AsyncParsableCommand {
         if let allowMain { return try setMain(allowMain, store: store) }
         if removeAll { return try removeAllRepos(store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
         if purge { return try purgeMissing(git: git, store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
+        if dedupe { return try dedupeRepos(store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
         if list { return try printList(store: store) }
         guard sync || dryRun else {
             print(Self.helpMessage())
@@ -135,11 +140,21 @@ struct Homerun: AsyncParsableCommand {
         return entries.filter { wanted.contains($0.canonicalPath) }
     }
 
+    // Re-adding a tracked repo keeps its `main` and `wipName` unless the flag was passed,
+    // so `--add --recursive` over a tree cannot quietly reset them.
+    private func entry(for path: String, in config: Config) -> RepoEntry {
+        let key = RepoEntry(repoPath: path, wipName: "", main: false).canonicalPath
+        let existing = config.repos.first { $0.canonicalPath == key }
+        return RepoEntry(
+            repoPath: path,
+            wipName: wipName ?? existing?.wipName ?? config.defaultWipName ?? "WIP",
+            main: allowMain ?? existing?.main ?? false)
+    }
+
     private func add(_ rawPath: String, git: any GitClient, store: any ConfigStore) throws -> Int32 {
         let path = resolved(rawPath)
         if path != rawPath { print("📍 Resolved \"\(rawPath)\" to \(path)") }
         var config = try store.load() ?? Config()
-        let wip = wipName ?? config.defaultWipName ?? "WIP"
 
         if recursive {
             let root = NSString(string: path).expandingTildeInPath
@@ -149,7 +164,7 @@ struct Homerun: AsyncParsableCommand {
                 print("📁 Found \(found.count) repo\(found.count == 1 ? "" : "s"):")
                 for repoPath in found { print("   " + Style.paint(repoPath, "2")) }
                 for repoPath in found {
-                    config.upsert(RepoEntry(repoPath: repoPath, wipName: wip, main: allowMain ?? false))
+                    config.upsert(entry(for: repoPath, in: config))
                 }
             }
             let missing = missingEntries(in: config, git: git)
@@ -157,7 +172,8 @@ struct Homerun: AsyncParsableCommand {
                 let missingIds = Set(missing.map(\.id))
                 config.repos.removeAll { missingIds.contains($0.id) }
             }
-            guard !found.isEmpty || !missing.isEmpty else {
+            let duplicates = config.dedupe()
+            guard !found.isEmpty || !missing.isEmpty || !duplicates.isEmpty else {
                 print(Style.paint("❌ No git repos found under \(path).", "31"))
                 return 1
             }
@@ -168,19 +184,24 @@ struct Homerun: AsyncParsableCommand {
             if !missing.isEmpty {
                 print(Style.paint("🗑️  Purged \(missing.count) repo\(missing.count == 1 ? "" : "s") no longer on disk.", "32"))
             }
+            if !duplicates.isEmpty {
+                print(Style.paint("👯 Dropped \(duplicates.count) duplicate entr\(duplicates.count == 1 ? "y" : "ies").", "32"))
+            }
             return 0
         }
 
         print("🔍 Checking \(path) is a git repo...")
-        let entry = RepoEntry(repoPath: path, wipName: wip, main: allowMain ?? false)
+        let entry = entry(for: path, in: config)
         guard git.isRepo(at: entry.expandedPath) else {
             print(Style.paint("❌ \(path) is not a git repo.", "31"))
             return 1
         }
+        let alreadyTracked = config.repos.contains { $0.canonicalPath == entry.canonicalPath }
         config.upsert(entry)
         try store.save(config)
         let id = config.repos.first(where: { $0.canonicalPath == entry.canonicalPath })?.id ?? entry.id
-        print(Style.paint("✅ Added \(path)", "32") + "  " + Style.paint("(\(id))", "2"))
+        let headline = alreadyTracked ? "🔁 Already tracked, updated \(path)" : "✅ Added \(path)"
+        print(Style.paint(headline, "32") + "  " + Style.paint("(\(id))", "2"))
         return 0
     }
 
@@ -262,6 +283,35 @@ struct Homerun: AsyncParsableCommand {
         return 0
     }
 
+    private func dedupeRepos(store: any ConfigStore, confirmer: any Confirmer, stdinIsTTY: Bool) throws -> Int32 {
+        var config = try store.load() ?? Config()
+        let groups = config.duplicateGroups()
+        guard !groups.isEmpty else {
+            print("📭 No duplicate repos.")
+            return 0
+        }
+        let count = groups.reduce(0) { $0 + $1.dropped.count }
+        print("👯 \(groups.count) repo\(groups.count == 1 ? "" : "s") tracked more than once:")
+        for group in groups {
+            print("   " + Style.paint("keep ", "2") + group.kept.repoPath)
+            for entry in group.dropped { print("   " + Style.paint("drop " + entry.repoPath, "2")) }
+        }
+        if !yolo {
+            guard stdinIsTTY else {
+                print(Style.paint("❌ Not a TTY — pass --yes to run unattended.", "31"))
+                return 1
+            }
+            guard confirmer.confirm(prompt: "🗑️  Remove \(count) duplicate entr\(count == 1 ? "y" : "ies")? [y/N] ") else {
+                print("🙅 Cancelled. Nothing was changed.")
+                return 0
+            }
+        }
+        _ = config.dedupe()
+        try store.save(config)
+        print(Style.paint("🗑️  Removed \(count) duplicate entr\(count == 1 ? "y" : "ies").", "32"))
+        return 0
+    }
+
     private func printList(store: any ConfigStore) throws -> Int32 {
         let config = try store.load() ?? Config()
         guard !config.repos.isEmpty else {
@@ -305,8 +355,15 @@ struct Homerun: AsyncParsableCommand {
     }
 
     // Descends until it finds a repo, then stops — nested/submodule repos below it are not walked.
-    // ponytail: follows symlinked directories as-is; a symlink cycle would loop forever.
+    // Follows symlinked directories, but a canonical-path visited set breaks any symlink cycle.
     private static func findRepos(in root: String, git: any GitClient) -> [String] {
+        var visited: Set<String> = []
+        return findRepos(in: root, git: git, visited: &visited)
+    }
+
+    private static func findRepos(in root: String, git: any GitClient, visited: inout Set<String>) -> [String] {
+        let canonical = URL(fileURLWithPath: root).resolvingSymlinksInPath().path
+        guard visited.insert(canonical).inserted else { return [] }
         if git.isRepo(at: root) { return [root] }
         guard let children = try? FileManager.default.contentsOfDirectory(atPath: root) else { return [] }
         var found: [String] = []
@@ -314,7 +371,7 @@ struct Homerun: AsyncParsableCommand {
             let path = root + "/" + child
             var isDirectory: ObjCBool = false
             guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else { continue }
-            found += findRepos(in: path, git: git)
+            found += findRepos(in: path, git: git, visited: &visited)
         }
         return found
     }

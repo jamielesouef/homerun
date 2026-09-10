@@ -1,3 +1,4 @@
+//
 //  ManageTests.swift
 //  homerun
 //
@@ -167,6 +168,22 @@ struct ManageTests {
         #expect(throws: (any Error).self) { try Homerun.parse(["--recursive"]) }
     }
 
+    // A symlink pointing back at an ancestor once hung the walk forever; the
+    // canonical-path visited set must break the cycle and still return the repo.
+    @Test func recursiveAddTerminatesOnASymlinkCycle() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-cycle-\(UUID().uuidString)")
+        let repoA = root.appendingPathComponent("a")
+        let loop = root.appendingPathComponent("loop")
+        try FileManager.default.createDirectory(at: repoA, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: loop, withDestinationURL: root)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let git = FakeGitClient([repoA.path: .init()])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: Config(), git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == [repoA.path])
+    }
+
     @Test func purgeRemovesOnlyMissingReposWithYolo() throws {
         let git = FakeGitClient(["/a": .init()])
         let existing = Config(repos: [
@@ -223,5 +240,121 @@ struct ManageTests {
         let (code, store) = try perform(["--add", root.path, "--recursive"], config: existing, git: git)
         #expect(code == 0)
         #expect(store.saved?.repos.isEmpty == true)
+    }
+
+    // `/private/tmp` is the real directory `/tmp` symlinks to, so both spellings
+    // canonicalise to the same repo — the same shape as ~/Developer symlinked to
+    // an external volume, which is what put duplicates in the config.
+    @Test func dedupeCollapsesSymlinkedDuplicatesWithYolo() throws {
+        let existing = Config(repos: [
+            RepoEntry(repoPath: "/tmp", wipName: "WIP", main: false),
+            RepoEntry(repoPath: "/private/tmp", wipName: "WIP", main: false),
+            RepoEntry(repoPath: "/b", wipName: "WIP", main: false),
+        ])
+        let (code, store) = try perform(["--dedupe", "--yolo"], config: existing)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == ["/tmp", "/b"])
+    }
+
+    @Test func dedupeKeepsTheFirstIdAndOrsMainIn() throws {
+        let first = RepoEntry(repoPath: "/tmp", wipName: "WIP", main: false)
+        let existing = Config(repos: [
+            first,
+            RepoEntry(repoPath: "/private/tmp", wipName: "Save", main: true),
+        ])
+        let (code, store) = try perform(["--dedupe", "--yolo"], config: existing)
+        #expect(code == 0)
+        #expect(store.saved?.repos.count == 1)
+        #expect(store.saved?.repos.first?.id == first.id)
+        #expect(store.saved?.repos.first?.wipName == "WIP")
+        #expect(store.saved?.repos.first?.main == true)
+    }
+
+    @Test func dedupeWithNoDuplicatesWritesNothing() throws {
+        let existing = Config(repos: [
+            RepoEntry(repoPath: "/a", wipName: "WIP", main: false),
+            RepoEntry(repoPath: "/b", wipName: "WIP", main: false),
+        ])
+        let (code, store) = try perform(["--dedupe", "--yolo"], config: existing)
+        #expect(code == 0)
+        #expect(store.saved == nil)
+    }
+
+    @Test func dedupeDeclinedWritesNothing() throws {
+        let existing = Config(repos: [
+            RepoEntry(repoPath: "/tmp", wipName: "WIP", main: false),
+            RepoEntry(repoPath: "/private/tmp", wipName: "WIP", main: false),
+        ])
+        let (code, store) = try perform(["--dedupe"], config: existing, confirm: false, tty: true)
+        #expect(code == 0)
+        #expect(store.saved == nil)
+    }
+
+    @Test func dedupeNonTTYWithoutYoloIsAnError() throws {
+        let existing = Config(repos: [
+            RepoEntry(repoPath: "/tmp", wipName: "WIP", main: false),
+            RepoEntry(repoPath: "/private/tmp", wipName: "WIP", main: false),
+        ])
+        let (code, store) = try perform(["--dedupe"], config: existing, tty: false)
+        #expect(code == 1)
+        #expect(store.saved == nil)
+    }
+
+    @Test func addDoesNotDuplicateARepoAlreadyTrackedByItsSymlinkedPath() throws {
+        let git = FakeGitClient(["/private/tmp": .init(), "/tmp": .init()])
+        let existing = Config(repos: [RepoEntry(repoPath: "/tmp", wipName: "WIP", main: false)])
+        let (code, store) = try perform(["--add", "/private/tmp"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.count == 1)
+    }
+
+    @Test func recursiveAddDropsDuplicatesAlreadyInTheConfig() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-dedupe-\(UUID().uuidString)")
+        let repoA = root.appendingPathComponent("a")
+        try FileManager.default.createDirectory(at: repoA, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let git = FakeGitClient([repoA.path: .init(), "/tmp": .init(), "/private/tmp": .init()])
+        let existing = Config(repos: [
+            RepoEntry(repoPath: "/tmp", wipName: "WIP", main: false),
+            RepoEntry(repoPath: "/private/tmp", wipName: "WIP", main: false),
+        ])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == ["/tmp", repoA.path])
+    }
+
+    @Test func reAddKeepsMainAndWipNameWhenNoFlagIsPassed() throws {
+        let git = FakeGitClient(["/tmp": .init(), "/private/tmp": .init()])
+        let existing = Config(repos: [RepoEntry(repoPath: "/tmp", wipName: "Save", main: true)])
+        let (code, store) = try perform(["--add", "/private/tmp"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.count == 1)
+        #expect(store.saved?.repos.first?.main == true)
+        #expect(store.saved?.repos.first?.wipName == "Save")
+    }
+
+    @Test func reAddStillHonoursAnExplicitMainFlag() throws {
+        let git = FakeGitClient(["/tmp": .init(), "/private/tmp": .init()])
+        let existing = Config(repos: [RepoEntry(repoPath: "/tmp", wipName: "Save", main: true)])
+        let (code, store) = try perform(["--add", "/private/tmp", "--main", "false"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.first?.main == false)
+        #expect(store.saved?.repos.first?.wipName == "Save")
+    }
+
+    @Test func recursiveAddKeepsMainOnAlreadyTrackedRepos() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-keepmain-\(UUID().uuidString)")
+        let repoA = root.appendingPathComponent("a")
+        try FileManager.default.createDirectory(at: repoA, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let git = FakeGitClient([repoA.path: .init()])
+        let existing = Config(repos: [RepoEntry(repoPath: repoA.path, wipName: "Save", main: true)])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.count == 1)
+        #expect(store.saved?.repos.first?.main == true)
+        #expect(store.saved?.repos.first?.wipName == "Save")
     }
 }

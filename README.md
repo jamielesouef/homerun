@@ -35,20 +35,24 @@ homerun --dry-run                           # same as --sync --dry-run
 homerun --sync --repo "~/dev/foo"           # limit to one repo, repeatable
 homerun --add "~/dev/foo" --main false      # or: homerun -a ~/dev/foo -m false
 homerun --add .                             # "." resolves to the current folder
-homerun --add ~/dev --recursive             # walk the tree, add every repo found, purge tracked repos whose path is gone
+homerun --add ~/dev --recursive             # walk the tree, add every repo found, purge tracked repos whose path is gone, drop duplicates
 homerun --main true                         # set main for the repo you are standing in
 homerun --remove .                          # or by id: homerun --remove <uuid>
 homerun --remove-all                        # asks to confirm; drop every tracked repo
 homerun --remove-all --yolo                 # skip the confirm
 homerun --purge                             # asks to confirm; drop tracked repos whose path no longer exists
 homerun --purge --yolo                      # skip the confirm
+homerun --dedupe                            # asks to confirm; collapse repos tracked more than once
+homerun --dedupe --yolo                     # skip the confirm
 homerun --list                              # show every tracked repo, with its id
 homerun --default-wip-name "SAVE"           # set the config-wide default prefix
 ```
 
-`--add-path`/`--remove-path` are accepted as aliases of `--add`/`--remove`. Every flag also has a single-letter short form (`-s`, `-d`, `-y`, `-a`, `-r`, `-R`, `-l`, `-A`, `-u`, `-p`, `-m`, `-w`, `-W`) — see `homerun --help`.
+`--add-path`/`--remove-path` are accepted as aliases of `--add`/`--remove`. Every flag also has a single-letter short form (`-s`, `-d`, `-y`, `-a`, `-r`, `-R`, `-l`, `-A`, `-u`, `-D`, `-p`, `-m`, `-w`, `-W`) — see `homerun --help`.
 
 `--main <true|false>` on its own updates the tracked repo whose path is the current folder — run it from the repo root. It fails with exit 1 if the current folder is not in the config. Passed alongside `--add`, it applies to the repo being added instead.
+
+`--dedupe` reports `📭 No duplicate repos.` and exits 0 when there is nothing to collapse.
 
 `--yolo` and `--dry-run` together is an error. `--recursive` without `--add` is an error.
 
@@ -104,7 +108,7 @@ Colour carries the status — green for pushed, dim for clean, yellow for pendin
 ```
 
 - `id` — a UUID assigned when the repo is added. Stable across re-adds of the same path; shown by `--list` and taken by `--remove <id>`.
-- `repoPath` — absolute or tilde-expanded path.
+- `repoPath` — absolute or tilde-expanded path, stored exactly as you typed it. Two entries are the same repo when their paths match after expanding `~` and resolving symlinks, so `~/dev/foo` and `/Volumes/Disk/dev/foo` — where one is a symlink to the other — are never both tracked.
 - `wipName` — prefix for the WIP commit message: `"\(wipName): \(ISO8601 timestamp)"`.
 - `main` — when `false`, skip the repo on `main`/`master` and report it as skipped. When `true`, treat it like any other branch.
 - `defaultWipName` — top-level, optional, set with `--default-wip-name`. Falls back to `"WIP"`.
@@ -116,6 +120,7 @@ Colour carries the status — green for pushed, dim for clean, yellow for pendin
 - `--dry-run` never prompts and never writes.
 - If stdin isn't a TTY and `--yolo` wasn't passed, homerun prints the plan and exits 1 rather than hang waiting on input.
 - A failure in one repo doesn't abort the others.
+- A repo is never tracked twice. `--add` updates the existing entry instead of adding a second one — keeping its id, `main` and `wipName` unless `--main`/`--wip-name` are passed — and `--add --recursive` drops any duplicate already in the config. `--dedupe` cleans up a config that already has duplicates: it keeps the first entry of each group, keeps its id, and keeps `main: true` if any entry in the group had it. A duplicate is only detected when the path exists on disk — symlinks can't be resolved otherwise; use `--purge` for entries whose path is gone.
 - Exit code 0 if every repo succeeded, was clean, or you cancelled. Exit 1 if any repo failed, or on the non-TTY case above.
 
 ## Out of scope

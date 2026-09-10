@@ -1,3 +1,4 @@
+//
 //  ConfigTests.swift
 //  homerun
 //
@@ -68,5 +69,37 @@ struct ConfigTests {
         // The minted id must be written back, or every load hands out a new one.
         let again = try #require(try store.load())
         #expect(again.repos.first?.id == loaded.repos.first?.id)
+    }
+
+    // The bug that filled the config with duplicates: ~/Developer was a symlink to
+    // /Volumes/S990/Developer, so the same repo was tracked under both spellings.
+    @Test func canonicalPathSeesThroughASymlink() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-symlink-\(UUID().uuidString)")
+        let real = root.appendingPathComponent("real")
+        let link = root.appendingPathComponent("link")
+        try FileManager.default.createDirectory(at: real, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let viaReal = RepoEntry(repoPath: real.path, wipName: "WIP", main: false)
+        let viaLink = RepoEntry(repoPath: link.path, wipName: "WIP", main: false)
+        #expect(viaReal.canonicalPath == viaLink.canonicalPath)
+
+        var config = Config(repos: [viaReal])
+        config.upsert(viaLink)
+        #expect(config.repos.count == 1)
+        #expect(config.repos.first?.id == viaReal.id)
+    }
+
+    @Test func dedupeReturnsTheEntriesItDropped() {
+        var config = Config(repos: [
+            RepoEntry(repoPath: "/tmp", wipName: "WIP", main: false),
+            RepoEntry(repoPath: "/private/tmp", wipName: "WIP", main: false),
+            RepoEntry(repoPath: "/b", wipName: "WIP", main: false),
+        ])
+        let dropped = config.dedupe()
+        #expect(dropped.map(\.repoPath) == ["/private/tmp"])
+        #expect(config.repos.map(\.repoPath) == ["/tmp", "/b"])
+        #expect(config.dedupe().isEmpty)
     }
 }
