@@ -39,7 +39,9 @@ homerun --add ~/dev --recursive             # walk the tree, add every repo foun
 homerun --ignore add node_modules           # skip any folder named node_modules during --add --recursive
 homerun --ignore add ~/dev/scratch          # skip that specific folder during --add --recursive
 homerun --ignore add .                      # ignore the current folder
+homerun --ignore add .build .git .vscode    # add several in one call
 homerun --ignore remove node_modules        # stop ignoring it
+homerun --ignore remove .build .git         # remove several in one call
 homerun --ignore list                       # show every ignored folder
 homerun --main true                         # set main for the repo you are standing in
 homerun --remove .                          # or by id: homerun --remove <uuid>
@@ -59,7 +61,7 @@ homerun --default-wip-name "SAVE"           # set the config-wide default prefix
 
 `--dedupe` reports `📭 No duplicate repos.` and exits 0 when there is nothing to collapse.
 
-`--ignore add|remove|list [<name-or-path>]` manages the folders skipped during `--add --recursive`: a bare name (e.g. `node_modules`) skips every folder with that name anywhere under the walked tree; a path (containing `/`, or `.` for the current folder) skips just that folder. An ignored folder is never walked into, even if it's itself a git repo. `--ignore add` fails with exit 1 if the folder is already ignored; `--ignore remove` fails with exit 1 if it wasn't ignored; `--ignore list` (no further argument) prints every ignored entry. `--list` also shows the ignored folders alongside tracked repos.
+`--ignore add|remove|list [<name-or-path>...]` manages the folders skipped during `--add --recursive`: a bare name (e.g. `node_modules`) skips every folder with that name anywhere under the walked tree; a path (containing `/`, or `.` for the current folder) skips just that folder. `add`/`remove` take one or more names/paths, space-separated (a stray trailing comma on an item is stripped). An ignored folder is never walked into, even if it's itself a git repo. `--ignore add` fails with exit 1 if any of the folders are already ignored, after adding the rest; `--ignore remove` fails with exit 1 if any weren't ignored, after removing the rest; `--ignore list` (no further argument) prints every ignored entry. `--list` also shows the ignored folders alongside tracked repos.
 
 `--yolo` and `--dry-run` together is an error. `--recursive` without `--add` is an error.
 

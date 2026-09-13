@@ -70,15 +70,15 @@ struct Homerun: AsyncParsableCommand {
         }
         if !ignoreArgs.isEmpty {
             guard let verb = ignoreArgs.first, ["add", "remove", "list"].contains(verb) else {
-                throw ValidationError("--ignore needs \"add <name-or-path>\", \"remove <name-or-path>\", or \"list\".")
+                throw ValidationError("--ignore needs \"add <name-or-path>...\", \"remove <name-or-path>...\", or \"list\".")
             }
             if verb == "list" {
                 guard ignoreArgs.count == 1 else {
                     throw ValidationError("--ignore list takes no further arguments.")
                 }
             } else {
-                guard ignoreArgs.count == 2 else {
-                    throw ValidationError("--ignore \(verb) needs exactly one name or path.")
+                guard ignoreArgs.count >= 2 else {
+                    throw ValidationError("--ignore \(verb) needs at least one name or path.")
                 }
             }
         }
@@ -277,35 +277,41 @@ struct Homerun: AsyncParsableCommand {
     }
 
     private func handleIgnore(_ args: [String], store: any ConfigStore) throws -> Int32 {
+        // A stray trailing comma (e.g. from `add .build, .git`) shouldn't end up baked into the config.
+        let items = args.dropFirst().map { $0.trimmingCharacters(in: CharacterSet(charactersIn: ",")) }
         switch args[0] {
-        case "add": return try addIgnore(args[1], store: store)
-        case "remove": return try removeIgnore(args[1], store: store)
+        case "add": return try addIgnore(items, store: store)
+        case "remove": return try removeIgnore(items, store: store)
         default: return try listIgnored(store: store)
         }
     }
 
-    private func addIgnore(_ raw: String, store: any ConfigStore) throws -> Int32 {
-        let path = resolved(raw)
+    private func addIgnore(_ raws: [String], store: any ConfigStore) throws -> Int32 {
         var config = try store.load() ?? Config()
-        guard config.addIgnore(path) else {
-            print(Style.paint("❌ \(path) is already ignored.", "31"))
-            return 1
+        var added: [String] = []
+        var alreadyIgnored: [String] = []
+        for raw in raws {
+            let path = resolved(raw)
+            if config.addIgnore(path) { added.append(path) } else { alreadyIgnored.append(path) }
         }
-        try store.save(config)
-        print(Style.paint("🙈 Ignoring \(path)", "32"))
-        return 0
+        if !added.isEmpty { try store.save(config) }
+        for path in added { print(Style.paint("🙈 Ignoring \(path)", "32")) }
+        for path in alreadyIgnored { print(Style.paint("❌ \(path) is already ignored.", "31")) }
+        return alreadyIgnored.isEmpty ? 0 : 1
     }
 
-    private func removeIgnore(_ raw: String, store: any ConfigStore) throws -> Int32 {
-        let path = resolved(raw)
+    private func removeIgnore(_ raws: [String], store: any ConfigStore) throws -> Int32 {
         var config = try store.load() ?? Config()
-        guard config.removeIgnore(path) else {
-            print(Style.paint("❌ \(path) is not ignored.", "31"))
-            return 1
+        var removed: [String] = []
+        var notIgnored: [String] = []
+        for raw in raws {
+            let path = resolved(raw)
+            if config.removeIgnore(path) { removed.append(path) } else { notIgnored.append(path) }
         }
-        try store.save(config)
-        print(Style.paint("👁️  No longer ignoring \(path)", "32"))
-        return 0
+        if !removed.isEmpty { try store.save(config) }
+        for path in removed { print(Style.paint("👁️  No longer ignoring \(path)", "32")) }
+        for path in notIgnored { print(Style.paint("❌ \(path) is not ignored.", "31")) }
+        return notIgnored.isEmpty ? 0 : 1
     }
 
     private func listIgnored(store: any ConfigStore) throws -> Int32 {

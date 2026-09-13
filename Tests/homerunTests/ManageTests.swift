@@ -363,6 +363,32 @@ struct ManageTests {
         #expect(store.saved == nil)
     }
 
+    @Test func ignoreAddsMultipleFoldersInOneCall() throws {
+        let (code, store) = try perform(["--ignore", "add", ".build", ".git", ".vscode"], config: Config())
+        #expect(code == 0)
+        #expect(store.saved?.ignoredFolders == [".build", ".git", ".vscode"])
+    }
+
+    @Test func ignoreAddStripsStrayTrailingCommas() throws {
+        let (code, store) = try perform(["--ignore", "add", ".build,", ".git,", ".vscode"], config: Config())
+        #expect(code == 0)
+        #expect(store.saved?.ignoredFolders == [".build", ".git", ".vscode"])
+    }
+
+    @Test func ignoreAddReportsAlreadyIgnoredButStillAddsTheRest() throws {
+        let existing = Config(ignoredFolders: ["node_modules"])
+        let (code, store) = try perform(["--ignore", "add", "node_modules", ".git"], config: existing)
+        #expect(code == 1)
+        #expect(store.saved?.ignoredFolders == ["node_modules", ".git"])
+    }
+
+    @Test func ignoreRemovesMultipleFoldersInOneCall() throws {
+        let existing = Config(ignoredFolders: ["node_modules", "build", ".git"])
+        let (code, store) = try perform(["--ignore", "remove", "node_modules", ".git"], config: existing)
+        #expect(code == 0)
+        #expect(store.saved?.ignoredFolders == ["build"])
+    }
+
     @Test func ignoreRemoveRemovesAFolderAndExits() throws {
         let existing = Config(ignoredFolders: ["node_modules", "build"])
         let (code, store) = try perform(["--ignore", "remove", "node_modules"], config: existing)
