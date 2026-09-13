@@ -28,14 +28,21 @@ Builds a release binary and copies it onto your `PATH` (`/usr/local/bin` by defa
 
 ```
 homerun                                     # no flags: print usage, exit 0
-homerun --sync                              # scan, show plan, confirm, push
-homerun --sync --yolo                       # skip the prompt, push immediately
-homerun --sync --dry-run                    # show the plan and exit, never prompts
-homerun --dry-run                           # same as --sync --dry-run
-homerun --sync --repo "~/dev/foo"           # limit to one repo, repeatable
+homerun --wip                               # scan, show plan, confirm, push
+homerun --wip --yolo                        # skip the prompt, push immediately
+homerun --wip --dry-run                     # show the plan and exit, never prompts
+homerun --dry-run                           # same as --wip --dry-run
+homerun --wip --repo "~/dev/foo"            # limit to one repo, repeatable
 homerun --add "~/dev/foo" --main false      # or: homerun -a ~/dev/foo -m false
 homerun --add .                             # "." resolves to the current folder
 homerun --add ~/dev --recursive             # walk the tree, add every repo found, purge tracked repos whose path is gone, drop duplicates
+homerun --ignore add node_modules           # skip any folder named node_modules during --add --recursive
+homerun --ignore add ~/dev/scratch          # skip that specific folder during --add --recursive
+homerun --ignore add .                      # ignore the current folder
+homerun --ignore add .build .git .vscode    # add several in one call
+homerun --ignore remove node_modules        # stop ignoring it
+homerun --ignore remove .build .git         # remove several in one call
+homerun --ignore list                       # show every ignored folder
 homerun --main true                         # set main for the repo you are standing in
 homerun --remove .                          # or by id: homerun --remove <uuid>
 homerun --remove-all                        # asks to confirm; drop every tracked repo
@@ -48,15 +55,19 @@ homerun --list                              # show every tracked repo, with its 
 homerun --default-wip-name "SAVE"           # set the config-wide default prefix
 ```
 
-`--add-path`/`--remove-path` are accepted as aliases of `--add`/`--remove`. Every flag also has a single-letter short form (`-s`, `-d`, `-y`, `-a`, `-r`, `-R`, `-l`, `-A`, `-u`, `-D`, `-p`, `-m`, `-w`, `-W`) — see `homerun --help`.
+`--add-path`/`--remove-path` are accepted as aliases of `--add`/`--remove`, and `--sync` is accepted as an alias of `--wip`. Every flag also has a single-letter short form (`-s`, `-d`, `-y`, `-a`, `-r`, `-R`, `-l`, `-A`, `-u`, `-D`, `-p`, `-m`, `-w`, `-W`, `-i`) — see `homerun --help`.
 
 `--main <true|false>` on its own updates the tracked repo whose path is the current folder — run it from the repo root. It fails with exit 1 if the current folder is not in the config. Passed alongside `--add`, it applies to the repo being added instead.
 
 `--dedupe` reports `📭 No duplicate repos.` and exits 0 when there is nothing to collapse.
 
+`--ignore add|remove|list [<name-or-path>...]` manages the folders skipped during `--add --recursive`: a bare name (e.g. `node_modules`) skips every folder with that name anywhere under the walked tree; a path (containing `/`, or `.` for the current folder) skips just that folder. `add`/`remove` take one or more names/paths, space-separated (a stray trailing comma on an item is stripped). An ignored folder is never walked into, even if it's itself a git repo. `--ignore add` fails with exit 1 if any of the folders are already ignored, after adding the rest; `--ignore remove` fails with exit 1 if any weren't ignored, after removing the rest; `--ignore list` (no further argument) prints every ignored entry. `--list` also shows the ignored folders alongside tracked repos.
+
+`--add --recursive` also reads a `.gitignore` at the walked root, if there is one, and skips whatever it names for that walk only — it is never written to the config. Only plain name/path lines are honoured (same rules as `--ignore` above); comments, blank lines, wildcards (`*`), and negation (`!`) lines are skipped rather than translated.
+
 `--yolo` and `--dry-run` together is an error. `--recursive` without `--add` is an error.
 
-## How a sync works
+## How a WIP run works
 
 1. Read the config listing tracked repos.
 2. For each repo, decide whether it needs attention: uncommitted changes (staged, unstaged, or untracked), local commits ahead of upstream, or a current branch with no upstream.
@@ -67,9 +78,24 @@ homerun --default-wip-name "SAVE"           # set the config-wide default prefix
 
 If nothing needs attention, homerun prints `Everything is pushed.` and exits without prompting. Nothing is ever written before you confirm — the plan phase is read-only.
 
+### Progress
+
+When stdout is a TTY, homerun narrates as it works — a line per repo as it's scanned, and a line per repo as it's pushed — so a long run over many repos never looks stalled. When stdout isn't a TTY (piped or redirected), the progress lines are suppressed and only the plan, results, and summary are printed, keeping scripted output clean.
+
+### GitHub account switching
+
+If you have more than one GitHub account authenticated with the [`gh` CLI](https://cli.github.com) and a push is rejected because the active account lacks access, homerun retries the push under each of your other `gh` accounts (via `gh auth switch`) until one works. The row then reports which account succeeded, e.g. `pushed → origin/main (as personal)`. Your original active account is always restored when the run finishes, regardless of outcome. This only applies to HTTPS remotes, where `gh` acts as git's credential helper; a non-fast-forward or merge rejection is never treated as an auth problem and never triggers a switch. If `gh` isn't installed or only one account is authenticated, a rejected push simply fails as before.
+
 ## Output
 
 ```
+Scanning 6 repos...
+  … tvos-app
+  … homerun
+  … dotfiles
+  … ios-app
+  … scratch
+
 Scanning 6 repos
 
   ↑  tvos-app         4 changed, 1 ahead      push → origin/feat-player
@@ -103,7 +129,8 @@ Colour carries the status — green for pushed, dim for clean, yellow for pendin
   "repos": [
     { "id": "71E1185C-AFA1-4791-B0C3-AD2892F2C49D", "repoPath": "~/dev/foo", "wipName": "WIP", "main": false }
   ],
-  "defaultWipName": "WIP"
+  "defaultWipName": "WIP",
+  "ignoredFolders": ["node_modules", "~/dev/scratch"]
 }
 ```
 
@@ -112,6 +139,7 @@ Colour carries the status — green for pushed, dim for clean, yellow for pendin
 - `wipName` — prefix for the WIP commit message: `"\(wipName): \(ISO8601 timestamp)"`.
 - `main` — when `false`, skip the repo on `main`/`master` and report it as skipped. When `true`, treat it like any other branch.
 - `defaultWipName` — top-level, optional, set with `--default-wip-name`. Falls back to `"WIP"`.
+- `ignoredFolders` — top-level, folder names or paths skipped by `--add --recursive`, managed with `--ignore add`/`--ignore remove`. Falls back to an empty list.
 
 ## Rules
 
@@ -129,7 +157,7 @@ Pull, merge, rebase, conflict resolution, credential setup, a daemon or file-wat
 
 ## Requirements
 
-macOS 13+, Swift 6.
+macOS 13+, Swift 6. GitHub account switching is optional and needs the [`gh` CLI](https://cli.github.com) with more than one account authenticated; without it, homerun works exactly as before.
 
 ## Building from source
 

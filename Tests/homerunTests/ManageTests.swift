@@ -164,6 +164,21 @@ struct ManageTests {
         #expect(Set(store.saved?.repos.map(\.repoPath) ?? []) == [repoA.path, repoB.path])
     }
 
+    @Test func recursiveAddStopsAtARepoAndTracksItInsteadOfWalkingInside() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-recursive-\(UUID().uuidString)")
+        let repo = root.appendingPathComponent("repo")
+        let nestedInsideRepo = repo.appendingPathComponent("sub")
+        try FileManager.default.createDirectory(at: nestedInsideRepo, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        // Both `repo` and the folder nested inside it look like repos to the fake client;
+        // once `repo` is found the walk must not descend into `sub` at all.
+        let git = FakeGitClient([repo.path: .init(), nestedInsideRepo.path: .init()])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: Config(), git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == [repo.path])
+    }
+
     @Test func recursiveWithoutAddIsRejected() {
         #expect(throws: (any Error).self) { try Homerun.parse(["--recursive"]) }
     }
@@ -341,6 +356,159 @@ struct ManageTests {
         #expect(code == 0)
         #expect(store.saved?.repos.first?.main == false)
         #expect(store.saved?.repos.first?.wipName == "Save")
+    }
+
+    @Test func ignoreAddsAFolderAndExits() throws {
+        let (code, store) = try perform(["--ignore", "add", "node_modules"], config: Config())
+        #expect(code == 0)
+        #expect(store.saved?.ignoredFolders == ["node_modules"])
+    }
+
+    @Test func ignoreDotResolvesToCurrentDirectory() throws {
+        let cwd = FileManager.default.currentDirectoryPath
+        let (code, store) = try perform(["--ignore", "add", "."], config: Config())
+        #expect(code == 0)
+        #expect(store.saved?.ignoredFolders == [cwd])
+    }
+
+    @Test func ignoringTheSameFolderTwiceFails() throws {
+        let existing = Config(ignoredFolders: ["node_modules"])
+        let (code, store) = try perform(["--ignore", "add", "node_modules"], config: existing)
+        #expect(code == 1)
+        #expect(store.saved == nil)
+    }
+
+    @Test func ignoreAddsMultipleFoldersInOneCall() throws {
+        let (code, store) = try perform(["--ignore", "add", ".build", ".git", ".vscode"], config: Config())
+        #expect(code == 0)
+        #expect(store.saved?.ignoredFolders == [".build", ".git", ".vscode"])
+    }
+
+    @Test func ignoreAddStripsStrayTrailingCommas() throws {
+        let (code, store) = try perform(["--ignore", "add", ".build,", ".git,", ".vscode"], config: Config())
+        #expect(code == 0)
+        #expect(store.saved?.ignoredFolders == [".build", ".git", ".vscode"])
+    }
+
+    @Test func ignoreAddReportsAlreadyIgnoredButStillAddsTheRest() throws {
+        let existing = Config(ignoredFolders: ["node_modules"])
+        let (code, store) = try perform(["--ignore", "add", "node_modules", ".git"], config: existing)
+        #expect(code == 1)
+        #expect(store.saved?.ignoredFolders == ["node_modules", ".git"])
+    }
+
+    @Test func ignoreRemovesMultipleFoldersInOneCall() throws {
+        let existing = Config(ignoredFolders: ["node_modules", "build", ".git"])
+        let (code, store) = try perform(["--ignore", "remove", "node_modules", ".git"], config: existing)
+        #expect(code == 0)
+        #expect(store.saved?.ignoredFolders == ["build"])
+    }
+
+    @Test func ignoreRemoveRemovesAFolderAndExits() throws {
+        let existing = Config(ignoredFolders: ["node_modules", "build"])
+        let (code, store) = try perform(["--ignore", "remove", "node_modules"], config: existing)
+        #expect(code == 0)
+        #expect(store.saved?.ignoredFolders == ["build"])
+    }
+
+    @Test func ignoreRemovingAFolderNotIgnoredFails() throws {
+        let (code, store) = try perform(["--ignore", "remove", "node_modules"], config: Config())
+        #expect(code == 1)
+        #expect(store.saved == nil)
+    }
+
+    @Test func ignoreListPrintsIgnoredFolders() throws {
+        let existing = Config(ignoredFolders: ["node_modules", "build"])
+        let (code, store) = try perform(["--ignore", "list"], config: existing)
+        #expect(code == 0)
+        #expect(store.saved == nil)
+    }
+
+    @Test func recursiveAddSkipsAnIgnoredFolderByName() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-ignore-\(UUID().uuidString)")
+        let repoA = root.appendingPathComponent("a")
+        let ignoredRepo = root.appendingPathComponent("node_modules/b")
+        try FileManager.default.createDirectory(at: repoA, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: ignoredRepo, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let git = FakeGitClient([repoA.path: .init(), ignoredRepo.path: .init()])
+        let existing = Config(ignoredFolders: ["node_modules"])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == [repoA.path])
+    }
+
+    @Test func recursiveAddSkipsAnIgnoredFolderByPath() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-ignore-\(UUID().uuidString)")
+        let repoA = root.appendingPathComponent("a")
+        let ignoredRepo = root.appendingPathComponent("scratch")
+        try FileManager.default.createDirectory(at: repoA, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: ignoredRepo, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let git = FakeGitClient([repoA.path: .init(), ignoredRepo.path: .init()])
+        let existing = Config(ignoredFolders: [ignoredRepo.path])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: existing, git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == [repoA.path])
+    }
+
+    @Test func recursiveAddSkipsAFolderNamedInARootGitignore() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-gitignore-\(UUID().uuidString)")
+        let repoA = root.appendingPathComponent("a")
+        let ignoredRepo = root.appendingPathComponent("node_modules/b")
+        try FileManager.default.createDirectory(at: repoA, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: ignoredRepo, withIntermediateDirectories: true)
+        try "# a comment\n\nnode_modules\n".write(to: root.appendingPathComponent(".gitignore"), atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let git = FakeGitClient([repoA.path: .init(), ignoredRepo.path: .init()])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: Config(), git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == [repoA.path])
+    }
+
+    @Test func recursiveAddSkipsANestedPathNamedInARootGitignore() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-gitignore-\(UUID().uuidString)")
+        let repoA = root.appendingPathComponent("a")
+        let ignoredRepo = root.appendingPathComponent("scratch/b")
+        try FileManager.default.createDirectory(at: repoA, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: ignoredRepo, withIntermediateDirectories: true)
+        try "/scratch/\n".write(to: root.appendingPathComponent(".gitignore"), atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let git = FakeGitClient([repoA.path: .init(), ignoredRepo.path: .init()])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: Config(), git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == [repoA.path])
+    }
+
+    @Test func recursiveAddIgnoresWildcardAndNegationGitignoreLines() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-gitignore-\(UUID().uuidString)")
+        let repoA = root.appendingPathComponent("a")
+        let buildDir = root.appendingPathComponent("build")
+        try FileManager.default.createDirectory(at: repoA, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: buildDir, withIntermediateDirectories: true)
+        try "*.log\n!build\n".write(to: root.appendingPathComponent(".gitignore"), atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let git = FakeGitClient([repoA.path: .init(), buildDir.path: .init()])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: Config(), git: git)
+        #expect(code == 0)
+        #expect(Set(store.saved?.repos.map(\.repoPath) ?? []) == [repoA.path, buildDir.path])
+    }
+
+    @Test func recursiveAddWithNoGitignoreIsUnaffected() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-gitignore-\(UUID().uuidString)")
+        let repoA = root.appendingPathComponent("a")
+        try FileManager.default.createDirectory(at: repoA, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let git = FakeGitClient([repoA.path: .init()])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: Config(), git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == [repoA.path])
     }
 
     @Test func recursiveAddKeepsMainOnAlreadyTrackedRepos() throws {

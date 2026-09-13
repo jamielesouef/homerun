@@ -14,8 +14,8 @@ struct Homerun: AsyncParsableCommand {
         abstract: "WIP-commit and push every tracked repo so work is never stranded on one machine."
     )
 
-    @Flag(name: [.customShort("s"), .long], help: "Scan every tracked repo, show the plan, and push what needs it.")
-    var sync = false
+    @Flag(name: [.customShort("s"), .customLong("wip"), .customLong("sync")], help: "Scan every tracked repo, show the plan, and push what needs it.")
+    var wip = false
 
     @Flag(name: [.customShort("d"), .long], help: "Show the plan and exit. Never prompts, never writes.")
     var dryRun = false
@@ -47,6 +47,11 @@ struct Homerun: AsyncParsableCommand {
     @Option(name: [.customShort("r"), .customLong("remove"), .long], help: "Remove a repo from the config and exit, by its id, its path, or \".\" for the current folder.")
     var removePath: String?
 
+    @Option(
+        name: [.customShort("i"), .customLong("ignore")], parsing: .upToNextOption,
+        help: "Manage the folders skipped during --add --recursive, and exit: \"add <name-or-path>\", \"remove <name-or-path>\", or \"list\". \".\" means the current folder.")
+    var ignoreArgs: [String] = []
+
     @Option(name: [.customShort("m"), .customLong("main")], help: "Push even when the branch is main or master. With --add it applies to the repo being added; on its own it updates the repo in the current folder.")
     var allowMain: Bool?
 
@@ -63,6 +68,20 @@ struct Homerun: AsyncParsableCommand {
         if recursive && addPath == nil {
             throw ValidationError("--recursive needs --add <path>.")
         }
+        if !ignoreArgs.isEmpty {
+            guard let verb = ignoreArgs.first, ["add", "remove", "list"].contains(verb) else {
+                throw ValidationError("--ignore needs \"add <name-or-path>...\", \"remove <name-or-path>...\", or \"list\".")
+            }
+            if verb == "list" {
+                guard ignoreArgs.count == 1 else {
+                    throw ValidationError("--ignore list takes no further arguments.")
+                }
+            } else {
+                guard ignoreArgs.count >= 2 else {
+                    throw ValidationError("--ignore \(verb) needs at least one name or path.")
+                }
+            }
+        }
     }
 
     func run() async throws {
@@ -70,35 +89,51 @@ struct Homerun: AsyncParsableCommand {
             git: ProcessGitClient(),
             store: JSONConfigStore(),
             confirmer: ReadLineConfirmer(),
-            stdinIsTTY: isatty(STDIN_FILENO) != 0
+            auth: ProcessGitHubAuth(),
+            stdinIsTTY: isatty(STDIN_FILENO) != 0,
+            showProgress: isatty(STDOUT_FILENO) != 0
         )
         if code != 0 { throw ExitCode(code) }
     }
 
     // The whole decision flow, with every side-effecting dependency injected so tests can drive it.
-    func perform(git: any GitClient, store: any ConfigStore, confirmer: any Confirmer, stdinIsTTY: Bool) throws -> Int32 {
+    // `auth` defaults to nil and `showProgress` to false so existing tests need no change.
+    func perform(
+        git: any GitClient, store: any ConfigStore, confirmer: any Confirmer,
+        auth: (any GitHubAuth)? = nil, stdinIsTTY: Bool, showProgress: Bool = false
+    ) throws -> Int32 {
         if let defaultWipName { return try setDefaultWipName(defaultWipName, store: store) }
         if let addPath { return try add(addPath, git: git, store: store) }
         if let removePath { return try remove(removePath, store: store) }
+        if !ignoreArgs.isEmpty { return try handleIgnore(ignoreArgs, store: store) }
         if let allowMain { return try setMain(allowMain, store: store) }
         if removeAll { return try removeAllRepos(store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
         if purge { return try purgeMissing(git: git, store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
         if dedupe { return try dedupeRepos(store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY) }
         if list { return try printList(store: store) }
-        guard sync || dryRun else {
+        guard wip || dryRun else {
             print(Self.helpMessage())
             return 0
         }
-        return try runSync(git: git, store: store, confirmer: confirmer, stdinIsTTY: stdinIsTTY)
+        return try runSync(git: git, store: store, confirmer: confirmer, auth: auth, stdinIsTTY: stdinIsTTY, showProgress: showProgress)
     }
 
-    private func runSync(git: any GitClient, store: any ConfigStore, confirmer: any Confirmer, stdinIsTTY: Bool) throws -> Int32 {
+    private func runSync(
+        git: any GitClient, store: any ConfigStore, confirmer: any Confirmer,
+        auth: (any GitHubAuth)?, stdinIsTTY: Bool, showProgress: Bool
+    ) throws -> Int32 {
         guard let config = try store.load(), !config.repos.isEmpty else {
             print("📭 No repos configured. Add one with --add <path>.")
             return 0
         }
         guard let entries = try filtered(config.repos) else { return 1 }
-        let plans = RepoPlan.scan(entries, git: git)
+        if showProgress {
+            print("Scanning \(entries.count) \(entries.count == 1 ? "repo" : "repos")...")
+        }
+        let plans = entries.map { entry -> RepoPlan in
+            if showProgress { print(Style.paint("  … \(entry.name)", "2")) }
+            return RepoPlan.scan(entry, git: git)
+        }
         let pending = plans.filter(\.status.needsPush)
         let scanFailed = plans.contains(where: \.status.isFailed)
         if pending.isEmpty, !scanFailed {
@@ -120,7 +155,18 @@ struct Homerun: AsyncParsableCommand {
                 return 0
             }
         }
-        let results = RepoResult.execute(plans, git: git)
+        if showProgress { print() }
+        let results = RepoResult.execute(plans, git: git, auth: auth) { event in
+            guard showProgress else { return }
+            switch event {
+            case .started(let name):
+                print(Style.paint("  ↑ \(name)…", "2"))
+            case .switchingAccount(let name, let account):
+                print(Style.paint("    ↺ \(name): retrying as \(account)", "33"))
+            case .finished:
+                break
+            }
+        }
         print()
         Row.render(results: results).forEach { print(Style.apply($0)) }
         print("\n\(Row.summary(results: results))")
@@ -158,8 +204,12 @@ struct Homerun: AsyncParsableCommand {
 
         if recursive {
             let root = NSString(string: path).expandingTildeInPath
+            let gitignored = Self.gitignoreEntries(atRoot: root)
+            if !gitignored.isEmpty {
+                print("🙈 Also skipping \(gitignored.count) entr\(gitignored.count == 1 ? "y" : "ies") from .gitignore")
+            }
             print("🔎 Walking \(root) for git repos...")
-            let found = Self.findRepos(in: root, git: git)
+            let found = Self.findRepos(in: root, git: git, ignoring: config.ignoredFolders + gitignored)
             if !found.isEmpty {
                 print("📁 Found \(found.count) repo\(found.count == 1 ? "" : "s"):")
                 for repoPath in found { print("   " + Style.paint(repoPath, "2")) }
@@ -227,6 +277,55 @@ struct Homerun: AsyncParsableCommand {
         }
         try store.save(config)
         print(Style.paint("🗑️  Removed \(path)", "32"))
+        return 0
+    }
+
+    private func handleIgnore(_ args: [String], store: any ConfigStore) throws -> Int32 {
+        // A stray trailing comma (e.g. from `add .build, .git`) shouldn't end up baked into the config.
+        let items = args.dropFirst().map { $0.trimmingCharacters(in: CharacterSet(charactersIn: ",")) }
+        switch args[0] {
+        case "add": return try addIgnore(items, store: store)
+        case "remove": return try removeIgnore(items, store: store)
+        default: return try listIgnored(store: store)
+        }
+    }
+
+    private func addIgnore(_ raws: [String], store: any ConfigStore) throws -> Int32 {
+        var config = try store.load() ?? Config()
+        var added: [String] = []
+        var alreadyIgnored: [String] = []
+        for raw in raws {
+            let path = resolved(raw)
+            if config.addIgnore(path) { added.append(path) } else { alreadyIgnored.append(path) }
+        }
+        if !added.isEmpty { try store.save(config) }
+        for path in added { print(Style.paint("🙈 Ignoring \(path)", "32")) }
+        for path in alreadyIgnored { print(Style.paint("❌ \(path) is already ignored.", "31")) }
+        return alreadyIgnored.isEmpty ? 0 : 1
+    }
+
+    private func removeIgnore(_ raws: [String], store: any ConfigStore) throws -> Int32 {
+        var config = try store.load() ?? Config()
+        var removed: [String] = []
+        var notIgnored: [String] = []
+        for raw in raws {
+            let path = resolved(raw)
+            if config.removeIgnore(path) { removed.append(path) } else { notIgnored.append(path) }
+        }
+        if !removed.isEmpty { try store.save(config) }
+        for path in removed { print(Style.paint("👁️  No longer ignoring \(path)", "32")) }
+        for path in notIgnored { print(Style.paint("❌ \(path) is not ignored.", "31")) }
+        return notIgnored.isEmpty ? 0 : 1
+    }
+
+    private func listIgnored(store: any ConfigStore) throws -> Int32 {
+        let config = try store.load() ?? Config()
+        guard !config.ignoredFolders.isEmpty else {
+            print("📭 No folders ignored.")
+            return 0
+        }
+        print("🙈 \(config.ignoredFolders.count) folder\(config.ignoredFolders.count == 1 ? "" : "s") ignored\n")
+        for path in config.ignoredFolders { print("   " + Style.paint(path, "2")) }
         return 0
     }
 
@@ -314,17 +413,24 @@ struct Homerun: AsyncParsableCommand {
 
     private func printList(store: any ConfigStore) throws -> Int32 {
         let config = try store.load() ?? Config()
-        guard !config.repos.isEmpty else {
+        guard !config.repos.isEmpty || !config.ignoredFolders.isEmpty else {
             print("📭 No repos configured. Add one with --add <path>.")
             return 0
         }
-        print("📋 \(config.repos.count) repo\(config.repos.count == 1 ? "" : "s") tracked\n")
-        for (index, entry) in config.repos.enumerated() {
-            print(Style.paint("📦 \(entry.name)", "1;36") + "  " + Style.paint("(\(entry.id))", "2"))
-            print("   📂 " + Style.paint(entry.repoPath, "2"))
-            print("   💾 commit: \(entry.wipName)")
-            print("   🔀 main: " + (entry.main ? Style.paint("true", "32") : Style.paint("false", "2")))
-            if index < config.repos.count - 1 { print() }
+        if !config.repos.isEmpty {
+            print("📋 \(config.repos.count) repo\(config.repos.count == 1 ? "" : "s") tracked\n")
+            for (index, entry) in config.repos.enumerated() {
+                print(Style.paint("📦 \(entry.name)", "1;36") + "  " + Style.paint("(\(entry.id))", "2"))
+                print("   📂 " + Style.paint(entry.repoPath, "2"))
+                print("   💾 commit: \(entry.wipName)")
+                print("   🔀 main: " + (entry.main ? Style.paint("true", "32") : Style.paint("false", "2")))
+                if index < config.repos.count - 1 { print() }
+            }
+        }
+        if !config.ignoredFolders.isEmpty {
+            if !config.repos.isEmpty { print() }
+            print("🙈 \(config.ignoredFolders.count) folder\(config.ignoredFolders.count == 1 ? "" : "s") ignored\n")
+            for path in config.ignoredFolders { print("   " + Style.paint(path, "2")) }
         }
         return 0
     }
@@ -354,16 +460,31 @@ struct Homerun: AsyncParsableCommand {
         path == "." ? FileManager.default.currentDirectoryPath : path
     }
 
-    // Descends until it finds a repo, then stops — nested/submodule repos below it are not walked.
-    // Follows symlinked directories, but a canonical-path visited set breaks any symlink cycle.
-    private static func findRepos(in root: String, git: any GitClient) -> [String] {
-        var visited: Set<String> = []
-        return findRepos(in: root, git: git, visited: &visited)
+    // Reads a top-level .gitignore at the walked root (if any) as extra, one-off ignore entries —
+    // never saved to config. Only plain name/path entries are honoured, same as --ignore itself:
+    // comments, blank lines, negation ("!"), and wildcards ("*") are skipped, not translated.
+    private static func gitignoreEntries(atRoot root: String) -> [String] {
+        guard let contents = try? String(contentsOfFile: root + "/.gitignore", encoding: .utf8) else { return [] }
+        return contents.split(separator: "\n").compactMap { rawLine -> String? in
+            var line = rawLine.trimmingCharacters(in: .whitespaces)
+            guard !line.isEmpty, !line.hasPrefix("#"), !line.hasPrefix("!"), !line.contains("*") else { return nil }
+            if line.hasSuffix("/") { line.removeLast() }
+            if line.hasPrefix("/") { line.removeFirst() }
+            return line.contains("/") ? root + "/" + line : line
+        }
     }
 
-    private static func findRepos(in root: String, git: any GitClient, visited: inout Set<String>) -> [String] {
+    // Descends until it finds a repo, then stops — nested/submodule repos below it are not walked.
+    // Follows symlinked directories, but a canonical-path visited set breaks any symlink cycle.
+    private static func findRepos(in root: String, git: any GitClient, ignoring: [String]) -> [String] {
+        var visited: Set<String> = []
+        return findRepos(in: root, git: git, ignoring: ignoring, visited: &visited)
+    }
+
+    private static func findRepos(in root: String, git: any GitClient, ignoring: [String], visited: inout Set<String>) -> [String] {
         let canonical = URL(fileURLWithPath: root).resolvingSymlinksInPath().path
         guard visited.insert(canonical).inserted else { return [] }
+        guard !isIgnored(root, ignoring: ignoring) else { return [] }
         if git.isRepo(at: root) { return [root] }
         guard let children = try? FileManager.default.contentsOfDirectory(atPath: root) else { return [] }
         var found: [String] = []
@@ -371,8 +492,21 @@ struct Homerun: AsyncParsableCommand {
             let path = root + "/" + child
             var isDirectory: ObjCBool = false
             guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else { continue }
-            found += findRepos(in: path, git: git, visited: &visited)
+            found += findRepos(in: path, git: git, ignoring: ignoring, visited: &visited)
         }
         return found
+    }
+
+    // An ignore entry with a "/" is matched as a full path (symlinks resolved);
+    // a bare name (e.g. "node_modules") is matched against every folder with that name.
+    private static func isIgnored(_ path: String, ignoring: [String]) -> Bool {
+        guard !ignoring.isEmpty else { return false }
+        let name = URL(fileURLWithPath: path).lastPathComponent
+        let canonical = URL(fileURLWithPath: path).standardizedFileURL.resolvingSymlinksInPath().path
+        return ignoring.contains { entry in
+            guard entry.contains("/") else { return entry == name }
+            let entryPath = NSString(string: entry).expandingTildeInPath
+            return URL(fileURLWithPath: entryPath).standardizedFileURL.resolvingSymlinksInPath().path == canonical
+        }
     }
 }

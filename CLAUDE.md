@@ -17,6 +17,12 @@ file is for working on the codebase, not for describing it to a user.
 - One repo failing must not abort the others.
 - Exit 0 on success/clean/cancel. Exit 1 on any failure or the non-TTY case.
 - Config writes must preserve every existing entry, including ids.
+- Progress narration (per-repo scan/push lines) is emitted only when stdout is a
+  TTY, so piped/redirected output stays limited to plan, results, and summary.
+- On an auth-failure push (permission denied / 403 / repo-not-found), retry under
+  each other `gh` account and restore the original active account when done. A
+  non-fast-forward or merge rejection is never an auth failure. No `gh`, or a
+  single account, means the push just fails as before.
 
 ## Architecture
 
@@ -24,8 +30,10 @@ file is for working on the codebase, not for describing it to a user.
 - Strict concurrency (`complete`), zero warnings
 - Platform: macOS 13+
 - Git via `Process` shelling out to `git`. No libgit2.
-- `GitClient`, `ConfigStore`, and `Confirmer` are protocols, so scan/plan/push logic
-  is testable without real repos or a TTY
+- `gh` account switching shells out to the `gh` CLI, behind the `GitHubAuth`
+  protocol so the retry path is tested with a fake, never a real `gh` login.
+- `GitClient`, `ConfigStore`, `Confirmer`, and `GitHubAuth` are protocols, so
+  scan/plan/push logic is testable without real repos, a TTY, or a GitHub account
 - Rendering is a pure function from `[RepoPlan]`/`[RepoResult]` to lines. Styling is
   applied at the edge, so tests assert on plain strings.
 
@@ -46,7 +54,8 @@ file is for working on the codebase, not for describing it to a user.
 ## Out of scope
 
 - pull, merge, rebase, conflict resolution
-- credential setup
+- credential setup (switching between already-authenticated `gh` accounts is in
+  scope; setting up or logging in those accounts is not)
 - daemon or file-watching mode
 - submodules
 
@@ -57,7 +66,11 @@ file is for working on the codebase, not for describing it to a user.
   push path, one-repo-fails-others-continue, config add/remove round-trip, plan
   rendering with colour disabled, and — via a fake `Confirmer` — that declining
   performs zero writes
-- Tests use a fake `GitClient` — no test creates or mutates a real repo
+- Tests use fake `GitClient`/`ConfigStore`/`GitHubAuth` — no test creates or
+  mutates a real repo, config file, or `gh` login
+- `gh`-switch coverage — via a fake `GitHubAuth`: auth-failure retries under
+  another account and reports it, the original active account is restored, a
+  non-auth failure never switches, and no handler / single account just fails
 
 ## Claude Code
 

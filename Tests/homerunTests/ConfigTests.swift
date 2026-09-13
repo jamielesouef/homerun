@@ -91,6 +91,20 @@ struct ConfigTests {
         #expect(config.repos.first?.id == viaReal.id)
     }
 
+    @Test func addIgnoreThenRemoveRoundTrips() {
+        var config = Config()
+        let added = config.addIgnore("node_modules")
+        let addedAgain = config.addIgnore("node_modules")
+        #expect(added)
+        #expect(!addedAgain)
+        #expect(config.ignoredFolders == ["node_modules"])
+        let removed = config.removeIgnore("node_modules")
+        let removedAgain = config.removeIgnore("node_modules")
+        #expect(removed)
+        #expect(!removedAgain)
+        #expect(config.ignoredFolders.isEmpty)
+    }
+
     @Test func dedupeReturnsTheEntriesItDropped() {
         var config = Config(repos: [
             RepoEntry(repoPath: "/tmp", wipName: "WIP", main: false),
