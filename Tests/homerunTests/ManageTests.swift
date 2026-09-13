@@ -164,6 +164,21 @@ struct ManageTests {
         #expect(Set(store.saved?.repos.map(\.repoPath) ?? []) == [repoA.path, repoB.path])
     }
 
+    @Test func recursiveAddStopsAtARepoAndTracksItInsteadOfWalkingInside() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("homerun-recursive-\(UUID().uuidString)")
+        let repo = root.appendingPathComponent("repo")
+        let nestedInsideRepo = repo.appendingPathComponent("sub")
+        try FileManager.default.createDirectory(at: nestedInsideRepo, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        // Both `repo` and the folder nested inside it look like repos to the fake client;
+        // once `repo` is found the walk must not descend into `sub` at all.
+        let git = FakeGitClient([repo.path: .init(), nestedInsideRepo.path: .init()])
+        let (code, store) = try perform(["--add", root.path, "--recursive"], config: Config(), git: git)
+        #expect(code == 0)
+        #expect(store.saved?.repos.map(\.repoPath) == [repo.path])
+    }
+
     @Test func recursiveWithoutAddIsRejected() {
         #expect(throws: (any Error).self) { try Homerun.parse(["--recursive"]) }
     }
