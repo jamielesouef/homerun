@@ -24,48 +24,104 @@ From source:
 
 Builds a release binary and copies it onto your `PATH` (`/usr/local/bin` by default, override with `PREFIX`).
 
+## Quick start
+
+```
+homerun add .          # start tracking the repo you're standing in
+homerun                # scan every tracked repo, show the plan, confirm, push
+```
+
+That's the whole workflow. Everything past this point — `clean`, `ignore`,
+`config` — is for managing the list of tracked repos, not for the day-to-day
+push.
+
 ## Commands
 
+`homerun` is one command tree: a bare `homerun` scans and pushes, and every
+other job is a named subcommand. Run `homerun <subcommand> --help` for that
+subcommand's own flags — each one only lists what applies to it.
+
+### Scan and push (the default — no subcommand name needed)
+
 ```
-homerun                                     # no flags: print usage, exit 0
-homerun --wip                               # scan, show plan, confirm, push
-homerun --wip --yolo                        # skip the prompt, push immediately
-homerun --wip --dry-run                     # show the plan and exit, never prompts
-homerun --dry-run                           # same as --wip --dry-run
-homerun --wip --repo "~/dev/foo"            # limit to one repo, repeatable
-homerun --add "~/dev/foo" --main false      # or: homerun -a ~/dev/foo -m false
-homerun --add .                             # "." resolves to the current folder
-homerun --add ~/dev --recursive             # walk the tree, add every repo found, purge tracked repos whose path is gone, drop duplicates
-homerun --ignore add node_modules           # skip any folder named node_modules during --add --recursive
-homerun --ignore add ~/dev/scratch          # skip that specific folder during --add --recursive
-homerun --ignore add .                      # ignore the current folder
-homerun --ignore add .build .git .vscode    # add several in one call
-homerun --ignore remove node_modules        # stop ignoring it
-homerun --ignore remove .build .git         # remove several in one call
-homerun --ignore list                       # show every ignored folder
-homerun --main true                         # set main for the repo you are standing in
-homerun --remove .                          # or by id: homerun --remove <uuid>
-homerun --remove-all                        # asks to confirm; drop every tracked repo
-homerun --remove-all --yolo                 # skip the confirm
-homerun --purge                             # asks to confirm; drop tracked repos whose path no longer exists
-homerun --purge --yolo                      # skip the confirm
-homerun --dedupe                            # asks to confirm; collapse repos tracked more than once
-homerun --dedupe --yolo                     # skip the confirm
-homerun --list                              # show every tracked repo, with its id
-homerun --default-wip-name "SAVE"           # set the config-wide default prefix
+homerun                                      # scan, show plan, confirm, push
+homerun --yes                                # skip the prompt, push immediately
+homerun --dry-run                            # show the plan and exit, never prompts
+homerun --repo "~/dev/foo"                   # limit to one repo, repeatable
 ```
 
-`--add-path`/`--remove-path` are accepted as aliases of `--add`/`--remove`, and `--sync` is accepted as an alias of `--wip`. Every flag also has a single-letter short form (`-s`, `-d`, `-y`, `-a`, `-r`, `-R`, `-l`, `-A`, `-u`, `-D`, `-p`, `-m`, `-w`, `-W`, `-i`) — see `homerun --help`.
+`--yes` and `--dry-run` together is an error — you can't skip the prompt and
+also refuse to write.
 
-`--main <true|false>` on its own updates the tracked repo whose path is the current folder — run it from the repo root. It fails with exit 1 if the current folder is not in the config. Passed alongside `--add`, it applies to the repo being added instead.
+### Manage tracked repos
 
-`--dedupe` reports `📭 No duplicate repos.` and exits 0 when there is nothing to collapse.
+```
+homerun add "~/dev/foo" --main false          # add a repo
+homerun add .                                 # "." resolves to the current folder
+homerun add ~/dev --recursive                 # walk the tree, add every repo found, purge tracked repos whose path is gone, drop duplicates
+homerun rm .                                  # or by id: homerun rm <uuid>
+homerun list                                  # show every tracked repo, with its id
+```
 
-`--ignore add|remove|list [<name-or-path>...]` manages the folders skipped during `--add --recursive`: a bare name (e.g. `node_modules`) skips every folder with that name anywhere under the walked tree; a path (containing `/`, or `.` for the current folder) skips just that folder. `add`/`remove` take one or more names/paths, space-separated (a stray trailing comma on an item is stripped). An ignored folder is never walked into, even if it's itself a git repo. `--ignore add` fails with exit 1 if any of the folders are already ignored, after adding the rest; `--ignore remove` fails with exit 1 if any weren't ignored, after removing the rest; `--ignore list` (no further argument) prints every ignored entry. `--list` also shows the ignored folders alongside tracked repos.
+### Clean up the config
 
-`--add --recursive` also reads a `.gitignore` at the walked root, if there is one, and skips whatever it names for that walk only — it is never written to the config. Only plain name/path lines are honoured (same rules as `--ignore` above); comments, blank lines, wildcards (`*`), and negation (`!`) lines are skipped rather than translated.
+```
+homerun clean                                 # asks to confirm; drop missing repos and collapse duplicates
+homerun clean --missing                       # only drop tracked repos whose path no longer exists
+homerun clean --dupes                         # only collapse repos tracked more than once
+homerun clean --all                           # drop every tracked repo
+homerun clean --all --yes                     # skip the confirm
+```
 
-`--yolo` and `--dry-run` together is an error. `--recursive` without `--add` is an error.
+### Skip folders during `add --recursive`
+
+```
+homerun ignore add node_modules               # skip any folder named node_modules during add --recursive
+homerun ignore add ~/dev/scratch              # skip that specific folder during add --recursive
+homerun ignore add .                          # ignore the current folder
+homerun ignore add .build .git .vscode        # add several in one call
+homerun ignore rm node_modules                # stop ignoring it
+homerun ignore rm .build .git                 # remove several in one call
+homerun ignore list                           # show every ignored folder
+```
+
+### Config-wide settings
+
+```
+homerun config main true                      # set main for the repo you are standing in
+homerun config wip-name "SAVE"                # set the config-wide default prefix
+```
+
+`rm` and `ignore rm` also accept `remove` as an alias. `-y`/`--yolo` is accepted
+as an alias of `--yes` on `homerun` and on `clean`.
+
+`homerun config main <true|false>` updates the tracked repo whose path is the
+current folder — run it from the repo root. It fails with exit 1 if the
+current folder is not in the config. Passed to `add` instead, it applies to
+the repo being added.
+
+`homerun clean` with no flag drops missing repos and collapses duplicates in
+one pass, with one confirm prompt. `--missing`/`--dupes` narrow it to just one
+kind; `--all` cannot be combined with either. It reports `📭 Nothing to
+clean.` (or the narrower `📭 No missing repos.`/`📭 No duplicate repos.`) and
+exits 0 when there is nothing to do.
+
+`homerun ignore add|rm|list [<name-or-path>...]` manages the folders skipped
+during `add --recursive`: a bare name (e.g. `node_modules`) skips every folder
+with that name anywhere under the walked tree; a path (containing `/`, or `.`
+for the current folder) skips just that folder. `add`/`rm` take one or more
+names/paths, space-separated (a stray trailing comma on an item is stripped).
+An ignored folder is never walked into, even if it's itself a git repo.
+`ignore add` fails with exit 1 if any of the folders are already ignored,
+after adding the rest; `ignore rm` fails with exit 1 if any weren't ignored,
+after removing the rest; `ignore list` prints every ignored entry. `list` also
+shows the ignored folders alongside tracked repos.
+
+`add --recursive` also reads a `.gitignore` at the walked root, if there is
+one, and skips whatever it names for that walk only — it is never written to
+the config. Only plain name/path lines are honoured (same rules as `ignore`
+above); comments, blank lines, wildcards (`*`), and negation (`!`) lines are
+skipped rather than translated.
 
 ## How a WIP run works
 
@@ -134,21 +190,21 @@ Colour carries the status — green for pushed, dim for clean, yellow for pendin
 }
 ```
 
-- `id` — a UUID assigned when the repo is added. Stable across re-adds of the same path; shown by `--list` and taken by `--remove <id>`.
+- `id` — a UUID assigned when the repo is added. Stable across re-adds of the same path; shown by `list` and taken by `rm <id>`.
 - `repoPath` — absolute or tilde-expanded path, stored exactly as you typed it. Two entries are the same repo when their paths match after expanding `~` and resolving symlinks, so `~/dev/foo` and `/Volumes/Disk/dev/foo` — where one is a symlink to the other — are never both tracked.
 - `wipName` — prefix for the WIP commit message: `"\(wipName): \(ISO8601 timestamp)"`.
 - `main` — when `false`, skip the repo on `main`/`master` and report it as skipped. When `true`, treat it like any other branch.
-- `defaultWipName` — top-level, optional, set with `--default-wip-name`. Falls back to `"WIP"`.
-- `ignoredFolders` — top-level, folder names or paths skipped by `--add --recursive`, managed with `--ignore add`/`--ignore remove`. Falls back to an empty list.
+- `defaultWipName` — top-level, optional, set with `config wip-name`. Falls back to `"WIP"`.
+- `ignoredFolders` — top-level, folder names or paths skipped by `add --recursive`, managed with `ignore add`/`ignore rm`. Falls back to an empty list.
 
 ## Rules
 
 - Never force pushes.
 - The plan phase is read-only — no staging, no commit, no push until you confirm.
 - `--dry-run` never prompts and never writes.
-- If stdin isn't a TTY and `--yolo` wasn't passed, homerun prints the plan and exits 1 rather than hang waiting on input.
+- If stdin isn't a TTY and `--yes` wasn't passed, homerun prints the plan and exits 1 rather than hang waiting on input.
 - A failure in one repo doesn't abort the others.
-- A repo is never tracked twice. `--add` updates the existing entry instead of adding a second one — keeping its id, `main` and `wipName` unless `--main`/`--wip-name` are passed — and `--add --recursive` drops any duplicate already in the config. `--dedupe` cleans up a config that already has duplicates: it keeps the first entry of each group, keeps its id, and keeps `main: true` if any entry in the group had it. A duplicate is only detected when the path exists on disk — symlinks can't be resolved otherwise; use `--purge` for entries whose path is gone.
+- A repo is never tracked twice. `add` updates the existing entry instead of adding a second one — keeping its id, `main` and `wipName` unless `--main`/`--wip-name` are passed — and `add --recursive` drops any duplicate already in the config. `clean --dupes` cleans up a config that already has duplicates: it keeps the first entry of each group, keeps its id, and keeps `main: true` if any entry in the group had it. A duplicate is only detected when the path exists on disk — symlinks can't be resolved otherwise; use `clean --missing` for entries whose path is gone.
 - Exit code 0 if every repo succeeded, was clean, or you cancelled. Exit 1 if any repo failed, or on the non-TTY case above.
 
 ## Out of scope

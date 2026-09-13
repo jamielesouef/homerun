@@ -13,12 +13,16 @@ file is for working on the codebase, not for describing it to a user.
   set. `main: false` skips `main`/`master` instead.
 - Nothing is written before the user confirms. Plan phase is read-only.
 - `--dry-run` never prompts, never writes.
-- Non-TTY stdin without `--yolo`: print the plan, exit 1, do not hang on input.
+- Non-TTY stdin without `--yes`: print the plan, exit 1, do not hang on input.
 - One repo failing must not abort the others.
 - Exit 0 on success/clean/cancel. Exit 1 on any failure or the non-TTY case.
 - Config writes must preserve every existing entry, including ids.
 - Progress narration (per-repo scan/push lines) is emitted only when stdout is a
   TTY, so piped/redirected output stays limited to plan, results, and summary.
+- `homerun` is a command tree, not a flat flag list: a bare `homerun` scans and
+  pushes (the `sync` default subcommand), and `add`, `rm`, `list`, `clean`,
+  `ignore`, `config` are subcommands, each with only its own flags. `--yes`
+  (alias `--yolo`) is canonical for skipping a confirm prompt.
 - On an auth-failure push (permission denied / 403 / repo-not-found), retry under
   each other `gh` account and restore the original active account when done. A
   non-fast-forward or merge rejection is never an auth failure. No `gh`, or a
@@ -36,11 +40,20 @@ file is for working on the codebase, not for describing it to a user.
   scan/plan/push logic is testable without real repos, a TTY, or a GitHub account
 - Rendering is a pure function from `[RepoPlan]`/`[RepoResult]` to lines. Styling is
   applied at the edge, so tests assert on plain strings.
+- The CLI is a root `ParsableCommand` with subcommands (`ArgumentParser`'s
+  `CommandConfiguration(subcommands:defaultSubcommand:)`), one file per
+  subcommand under `Sources/homerun/Commands/`. Each subcommand shell only
+  parses flags and wires real adapters; the actual logic lives in a matching
+  plain struct/enum under `Sources/homerun/Core/`, taking the parsed values and
+  the injected protocols. Every leaf subcommand conforms to `HomerunCommand`
+  (`Commands/HomerunCommand.swift`), which is the seam tests drive — the same
+  role `Homerun.perform` played before subcommands existed.
 
 ### Dependencies
 
-- `https://github.com/apple/swift-argument-parser` — the entire flag surface. One
-  `ParsableCommand`, no subcommands.
+- `https://github.com/apple/swift-argument-parser` — the entire flag and
+  subcommand surface: a root `ParsableCommand` with a `sync` default
+  subcommand plus `add`, `rm`, `list`, `clean`, `ignore`, `config`.
 - Colour, column alignment, and the prompt are hand-written stdlib code
   (`Style.swift`, `Row.swift`, `Confirmer.swift`) — no dependency for any of them.
 - Config is read/written with Foundation's `JSONEncoder`/`JSONDecoder` — no YAML.
