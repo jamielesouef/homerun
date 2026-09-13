@@ -24,29 +24,58 @@ From source:
 
 Builds a release binary and copies it onto your `PATH` (`/usr/local/bin` by default, override with `PREFIX`).
 
+## Quick start
+
+```
+homerun add .          # start tracking the repo you're standing in
+homerun                # scan every tracked repo, show the plan, confirm, push
+```
+
+That's the whole workflow. Everything past this point — `clean`, `ignore`,
+`config` — is for managing the list of tracked repos, not for the day-to-day
+push.
+
 ## Commands
 
 `homerun` is one command tree: a bare `homerun` scans and pushes, and every
-other job is a named subcommand.
+other job is a named subcommand. Run `homerun <subcommand> --help` for that
+subcommand's own flags — each one only lists what applies to it.
+
+### Scan and push (the default — no subcommand name needed)
 
 ```
 homerun                                      # scan, show plan, confirm, push
 homerun --yes                                # skip the prompt, push immediately
 homerun --dry-run                            # show the plan and exit, never prompts
-homerun --repo "~/dev/foo"                    # limit to one repo, repeatable
+homerun --repo "~/dev/foo"                   # limit to one repo, repeatable
+```
 
+`--yes` and `--dry-run` together is an error — you can't skip the prompt and
+also refuse to write.
+
+### Manage tracked repos
+
+```
 homerun add "~/dev/foo" --main false          # add a repo
 homerun add .                                 # "." resolves to the current folder
 homerun add ~/dev --recursive                 # walk the tree, add every repo found, purge tracked repos whose path is gone, drop duplicates
 homerun rm .                                  # or by id: homerun rm <uuid>
 homerun list                                  # show every tracked repo, with its id
+```
 
+### Clean up the config
+
+```
 homerun clean                                 # asks to confirm; drop missing repos and collapse duplicates
 homerun clean --missing                       # only drop tracked repos whose path no longer exists
 homerun clean --dupes                         # only collapse repos tracked more than once
 homerun clean --all                           # drop every tracked repo
 homerun clean --all --yes                     # skip the confirm
+```
 
+### Skip folders during `add --recursive`
+
+```
 homerun ignore add node_modules               # skip any folder named node_modules during add --recursive
 homerun ignore add ~/dev/scratch              # skip that specific folder during add --recursive
 homerun ignore add .                          # ignore the current folder
@@ -54,14 +83,17 @@ homerun ignore add .build .git .vscode        # add several in one call
 homerun ignore rm node_modules                # stop ignoring it
 homerun ignore rm .build .git                 # remove several in one call
 homerun ignore list                           # show every ignored folder
+```
 
+### Config-wide settings
+
+```
 homerun config main true                      # set main for the repo you are standing in
 homerun config wip-name "SAVE"                # set the config-wide default prefix
 ```
 
 `rm` and `ignore rm` also accept `remove` as an alias. `-y`/`--yolo` is accepted
-as an alias of `--yes` on `homerun` and on `clean`. Run `homerun <subcommand>
---help` for that subcommand's own flags.
+as an alias of `--yes` on `homerun` and on `clean`.
 
 `homerun config main <true|false>` updates the tracked repo whose path is the
 current folder — run it from the repo root. It fails with exit 1 if the
@@ -90,8 +122,6 @@ one, and skips whatever it names for that walk only — it is never written to
 the config. Only plain name/path lines are honoured (same rules as `ignore`
 above); comments, blank lines, wildcards (`*`), and negation (`!`) lines are
 skipped rather than translated.
-
-`--yes` and `--dry-run` together is an error.
 
 ## How a WIP run works
 
