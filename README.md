@@ -63,6 +63,8 @@ homerun --default-wip-name "SAVE"           # set the config-wide default prefix
 
 `--ignore add|remove|list [<name-or-path>...]` manages the folders skipped during `--add --recursive`: a bare name (e.g. `node_modules`) skips every folder with that name anywhere under the walked tree; a path (containing `/`, or `.` for the current folder) skips just that folder. `add`/`remove` take one or more names/paths, space-separated (a stray trailing comma on an item is stripped). An ignored folder is never walked into, even if it's itself a git repo. `--ignore add` fails with exit 1 if any of the folders are already ignored, after adding the rest; `--ignore remove` fails with exit 1 if any weren't ignored, after removing the rest; `--ignore list` (no further argument) prints every ignored entry. `--list` also shows the ignored folders alongside tracked repos.
 
+`--add --recursive` also reads a `.gitignore` at the walked root, if there is one, and skips whatever it names for that walk only — it is never written to the config. Only plain name/path lines are honoured (same rules as `--ignore` above); comments, blank lines, wildcards (`*`), and negation (`!`) lines are skipped rather than translated.
+
 `--yolo` and `--dry-run` together is an error. `--recursive` without `--add` is an error.
 
 ## How a WIP run works

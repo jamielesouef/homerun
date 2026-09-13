@@ -204,8 +204,12 @@ struct Homerun: AsyncParsableCommand {
 
         if recursive {
             let root = NSString(string: path).expandingTildeInPath
+            let gitignored = Self.gitignoreEntries(atRoot: root)
+            if !gitignored.isEmpty {
+                print("🙈 Also skipping \(gitignored.count) entr\(gitignored.count == 1 ? "y" : "ies") from .gitignore")
+            }
             print("🔎 Walking \(root) for git repos...")
-            let found = Self.findRepos(in: root, git: git, ignoring: config.ignoredFolders)
+            let found = Self.findRepos(in: root, git: git, ignoring: config.ignoredFolders + gitignored)
             if !found.isEmpty {
                 print("📁 Found \(found.count) repo\(found.count == 1 ? "" : "s"):")
                 for repoPath in found { print("   " + Style.paint(repoPath, "2")) }
@@ -454,6 +458,20 @@ struct Homerun: AsyncParsableCommand {
 
     private func resolved(_ path: String) -> String {
         path == "." ? FileManager.default.currentDirectoryPath : path
+    }
+
+    // Reads a top-level .gitignore at the walked root (if any) as extra, one-off ignore entries —
+    // never saved to config. Only plain name/path entries are honoured, same as --ignore itself:
+    // comments, blank lines, negation ("!"), and wildcards ("*") are skipped, not translated.
+    private static func gitignoreEntries(atRoot root: String) -> [String] {
+        guard let contents = try? String(contentsOfFile: root + "/.gitignore", encoding: .utf8) else { return [] }
+        return contents.split(separator: "\n").compactMap { rawLine -> String? in
+            var line = rawLine.trimmingCharacters(in: .whitespaces)
+            guard !line.isEmpty, !line.hasPrefix("#"), !line.hasPrefix("!"), !line.contains("*") else { return nil }
+            if line.hasSuffix("/") { line.removeLast() }
+            if line.hasPrefix("/") { line.removeFirst() }
+            return line.contains("/") ? root + "/" + line : line
+        }
     }
 
     // Descends until it finds a repo, then stops — nested/submodule repos below it are not walked.
