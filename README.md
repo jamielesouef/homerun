@@ -36,6 +36,11 @@ homerun --wip --repo "~/dev/foo"            # limit to one repo, repeatable
 homerun --add "~/dev/foo" --main false      # or: homerun -a ~/dev/foo -m false
 homerun --add .                             # "." resolves to the current folder
 homerun --add ~/dev --recursive             # walk the tree, add every repo found, purge tracked repos whose path is gone, drop duplicates
+homerun --ignore add node_modules           # skip any folder named node_modules during --add --recursive
+homerun --ignore add ~/dev/scratch          # skip that specific folder during --add --recursive
+homerun --ignore add .                      # ignore the current folder
+homerun --ignore remove node_modules        # stop ignoring it
+homerun --ignore list                       # show every ignored folder
 homerun --main true                         # set main for the repo you are standing in
 homerun --remove .                          # or by id: homerun --remove <uuid>
 homerun --remove-all                        # asks to confirm; drop every tracked repo
@@ -48,11 +53,13 @@ homerun --list                              # show every tracked repo, with its 
 homerun --default-wip-name "SAVE"           # set the config-wide default prefix
 ```
 
-`--add-path`/`--remove-path` are accepted as aliases of `--add`/`--remove`, and `--sync` is accepted as an alias of `--wip`. Every flag also has a single-letter short form (`-s`, `-d`, `-y`, `-a`, `-r`, `-R`, `-l`, `-A`, `-u`, `-D`, `-p`, `-m`, `-w`, `-W`) — see `homerun --help`.
+`--add-path`/`--remove-path` are accepted as aliases of `--add`/`--remove`, and `--sync` is accepted as an alias of `--wip`. Every flag also has a single-letter short form (`-s`, `-d`, `-y`, `-a`, `-r`, `-R`, `-l`, `-A`, `-u`, `-D`, `-p`, `-m`, `-w`, `-W`, `-i`) — see `homerun --help`.
 
 `--main <true|false>` on its own updates the tracked repo whose path is the current folder — run it from the repo root. It fails with exit 1 if the current folder is not in the config. Passed alongside `--add`, it applies to the repo being added instead.
 
 `--dedupe` reports `📭 No duplicate repos.` and exits 0 when there is nothing to collapse.
+
+`--ignore add|remove|list [<name-or-path>]` manages the folders skipped during `--add --recursive`: a bare name (e.g. `node_modules`) skips every folder with that name anywhere under the walked tree; a path (containing `/`, or `.` for the current folder) skips just that folder. An ignored folder is never walked into, even if it's itself a git repo. `--ignore add` fails with exit 1 if the folder is already ignored; `--ignore remove` fails with exit 1 if it wasn't ignored; `--ignore list` (no further argument) prints every ignored entry. `--list` also shows the ignored folders alongside tracked repos.
 
 `--yolo` and `--dry-run` together is an error. `--recursive` without `--add` is an error.
 
@@ -118,7 +125,8 @@ Colour carries the status — green for pushed, dim for clean, yellow for pendin
   "repos": [
     { "id": "71E1185C-AFA1-4791-B0C3-AD2892F2C49D", "repoPath": "~/dev/foo", "wipName": "WIP", "main": false }
   ],
-  "defaultWipName": "WIP"
+  "defaultWipName": "WIP",
+  "ignoredFolders": ["node_modules", "~/dev/scratch"]
 }
 ```
 
@@ -127,6 +135,7 @@ Colour carries the status — green for pushed, dim for clean, yellow for pendin
 - `wipName` — prefix for the WIP commit message: `"\(wipName): \(ISO8601 timestamp)"`.
 - `main` — when `false`, skip the repo on `main`/`master` and report it as skipped. When `true`, treat it like any other branch.
 - `defaultWipName` — top-level, optional, set with `--default-wip-name`. Falls back to `"WIP"`.
+- `ignoredFolders` — top-level, folder names or paths skipped by `--add --recursive`, managed with `--ignore add`/`--ignore remove`. Falls back to an empty list.
 
 ## Rules
 

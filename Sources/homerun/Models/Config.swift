@@ -11,6 +11,22 @@ struct Config: Codable, Equatable, Sendable {
     var repos: [RepoEntry] = []
     // Falls back to "WIP" wherever this is nil; set via `--default-wip-name`.
     var defaultWipName: String?
+    // Folder names (e.g. "node_modules") or full paths skipped by --add --recursive.
+    var ignoredFolders: [String] = []
+
+    init(repos: [RepoEntry] = [], defaultWipName: String? = nil, ignoredFolders: [String] = []) {
+        self.repos = repos
+        self.defaultWipName = defaultWipName
+        self.ignoredFolders = ignoredFolders
+    }
+
+    // A config written before ignoredFolders existed has no such key; default it on load.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        repos = try container.decodeIfPresent([RepoEntry].self, forKey: .repos) ?? []
+        defaultWipName = try container.decodeIfPresent(String.self, forKey: .defaultWipName)
+        ignoredFolders = try container.decodeIfPresent([String].self, forKey: .ignoredFolders) ?? []
+    }
 
     mutating func upsert(_ entry: RepoEntry) {
         if let index = repos.firstIndex(where: { $0.canonicalPath == entry.canonicalPath }) {
@@ -63,6 +79,19 @@ struct Config: Codable, Equatable, Sendable {
         guard let index = repos.firstIndex(where: { $0.canonicalPath == key }) else { return false }
         repos[index].main = value
         return true
+    }
+
+    // Returns false if `path` was already ignored, so the caller can report that.
+    mutating func addIgnore(_ path: String) -> Bool {
+        guard !ignoredFolders.contains(path) else { return false }
+        ignoredFolders.append(path)
+        return true
+    }
+
+    mutating func removeIgnore(_ path: String) -> Bool {
+        let before = ignoredFolders.count
+        ignoredFolders.removeAll { $0 == path }
+        return ignoredFolders.count != before
     }
 
     mutating func remove(id: UUID) -> Bool {
