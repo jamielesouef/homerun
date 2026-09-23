@@ -29,6 +29,11 @@ final class RepositoriesService: SingleFlightRefreshing {
     private(set) var readinessReports: [String: ReadinessReport] = [:]
     private(set) var isScanning = false
     private(set) var lastMaintenanceMessage: String?
+    private(set) var foldersAwaitingScanDecision: [URL] = []
+
+    var folderAwaitingScanDecision: URL? {
+        foldersAwaitingScanDecision.first
+    }
 
     var filter: RepositoryStatusFilter
     var sortOrder: RepositorySortOrder
@@ -113,17 +118,29 @@ final class RepositoriesService: SingleFlightRefreshing {
         await refresh()
     }
 
-    func addRepository(at url: URL) async -> Bool {
+    @discardableResult
+    func addRepository(at url: URL) async -> RepositoryAddOutcome {
         let standardised = url.standardizedFileURL
 
         guard await gitClient.isRepository(at: standardised) else {
-            lastMaintenanceMessage = String(localized: "\(standardised.lastPathComponent) is not a git repository.")
-            return false
+            if foldersAwaitingScanDecision.contains(standardised) == false {
+                foldersAwaitingScanDecision.append(standardised)
+            }
+
+            return .notARepository(standardised)
         }
 
         await add([DiscoveredRepository(url: standardised)])
 
-        return true
+        return .added
+    }
+
+    func dismissScanDecision() {
+        guard foldersAwaitingScanDecision.isEmpty == false else {
+            return
+        }
+
+        foldersAwaitingScanDecision.removeFirst()
     }
 
     func scanFolder(_ url: URL) async -> [DiscoveredRepository] {

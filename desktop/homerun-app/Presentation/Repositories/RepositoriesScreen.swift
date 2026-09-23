@@ -86,6 +86,26 @@ struct RepositoriesScreen: View {
                 discovered = []
             }
         }
+        .confirmationDialog(
+            String(localized: "Not a git repository"),
+            isPresented: scanPromptBinding,
+            titleVisibility: .visible,
+            presenting: repositories.folderAwaitingScanDecision
+        ) { folder in
+            Button(String(localized: "Search for repositories")) {
+                Task {
+                    discovered = await repositories.scanFolder(folder)
+                }
+            }
+
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        } message: { folder in
+            Text(
+                String(
+                    localized: "\(folder.lastPathComponent) is not a git repository. Search inside it for repositories to track?"
+                )
+            )
+        }
         .alert(item: $pendingRemoval) { removal in
             Alert(
                 title: Text(removal.title),
@@ -198,6 +218,19 @@ struct RepositoriesScreen: View {
 
     private var searchBinding: Binding<String> {
         Binding(get: { repositories.searchText }, set: { repositories.searchText = $0 })
+    }
+
+    private var scanPromptBinding: Binding<Bool> {
+        Binding(
+            get: { repositories.folderAwaitingScanDecision != nil },
+            set: { isPresented in
+                guard isPresented == false else {
+                    return
+                }
+
+                repositories.dismissScanDecision()
+            }
+        )
     }
 
     private var discoveredBinding: Binding<Bool> {

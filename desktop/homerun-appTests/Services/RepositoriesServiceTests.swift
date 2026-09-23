@@ -112,15 +112,53 @@ struct RepositoriesServiceTests {
         #expect(await harness.discovery.ignoredFolderNames == ["Pods"])
     }
 
-    @Test("refuses a folder that is not a git repository")
+    @Test("offers to search a folder that is not itself a git repository")
     @MainActor
-    func refusesNonRepository() async {
+    func offersToSearchNonRepository() async {
         let harness = ServiceHarness()
+        let folder = URL(filePath: "/dev/not-a-repo")
 
-        let added = await harness.repositories.addRepository(at: URL(filePath: "/dev/not-a-repo"))
+        let outcome = await harness.repositories.addRepository(at: folder)
 
-        #expect(added == false)
+        #expect(outcome == .notARepository(folder))
+        #expect(harness.repositories.folderAwaitingScanDecision == folder)
         #expect(harness.sharedStore.repositories.isEmpty)
+    }
+
+    @Test("adds a folder that is a git repository without asking to search it")
+    @MainActor
+    func addsRepositoryWithoutAsking() async {
+        let harness = ServiceHarness()
+        let directory = harness.makeDirectory("app")
+        await harness.gitClient.setSnapshot(RepositoryFixtures.snapshot(), at: directory)
+
+        let outcome = await harness.repositories.addRepository(at: directory)
+
+        #expect(outcome == .added)
+        #expect(harness.repositories.folderAwaitingScanDecision == nil)
+        #expect(harness.sharedStore.repositories.count == 1)
+    }
+
+    @Test("queues each folder it could not add and offers them one at a time")
+    @MainActor
+    func queuesEachFolderToSearch() async {
+        let harness = ServiceHarness()
+        let first = URL(filePath: "/dev/one")
+        let second = URL(filePath: "/dev/two")
+
+        await harness.repositories.addRepository(at: first)
+        await harness.repositories.addRepository(at: second)
+        await harness.repositories.addRepository(at: first)
+
+        #expect(harness.repositories.foldersAwaitingScanDecision == [first, second])
+
+        harness.repositories.dismissScanDecision()
+
+        #expect(harness.repositories.folderAwaitingScanDecision == second)
+
+        harness.repositories.dismissScanDecision()
+
+        #expect(harness.repositories.folderAwaitingScanDecision == nil)
     }
 
     @Test("adds a discovered repository keyed on its remote and records this Mac's path")
