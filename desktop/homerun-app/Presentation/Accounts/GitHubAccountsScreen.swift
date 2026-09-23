@@ -1,0 +1,200 @@
+import SwiftUI
+
+struct GitHubAccountsScreen: View {
+    // MARK: - Environment
+
+    @Environment(\.accountsService) private var accounts
+    @Environment(\.repositoriesService) private var repositories
+    @Environment(\.settingsService) private var settings
+
+    // MARK: - View
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: AppSpacing.large) {
+                content
+                fallbackSettings
+                associations
+            }
+            .padding(AppSpacing.large)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .task {
+            await accounts.start()
+        }
+    }
+
+    // MARK: - Load state
+
+    @ViewBuilder
+    private var content: some View {
+        switch accounts.loadState {
+        case .loading:
+            ProgressView()
+                .frame(maxWidth: .infinity)
+        case .unavailable(let error):
+            EmptyStateView(
+                symbolName: "person.crop.circle.badge.exclamationmark",
+                title: error.message,
+                message: String(localized: "Ordinary git sync still works with your existing git authentication. Account management and retrying a push with another account need gh."),
+                actionTitle: String(localized: "Check again"),
+                action: { Task { await accounts.refresh() } }
+            )
+        case .empty:
+            EmptyStateView(
+                symbolName: "person.crop.circle",
+                title: String(localized: "No accounts signed in"),
+                message: String(localized: "Sign in with gh to manage accounts here.")
+            )
+        case .loaded(let list):
+            accountList(list)
+        }
+    }
+
+    private func accountList(_ list: [GitHubAccount]) -> some View {
+        VStack(alignment: .leading, spacing: AppSpacing.small) {
+            Text(String(localized: "Signed in"))
+                .font(.headline)
+
+            ForEach(list) { account in
+                HStack(spacing: AppSpacing.medium) {
+                    Image(systemName: account.isActive ? "checkmark.circle.fill" : "person.crop.circle")
+                        .foregroundStyle(account.isActive ? Color.green : Color.secondary)
+                        .accessibilityHidden(true)
+
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(account.login)
+                            .font(.body.weight(.medium))
+
+                        Text(account.host)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    if accounts.switchingAccount == account.login {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else if account.isActive == false {
+                        Button(String(localized: "Make active")) {
+                            Task {
+                                await accounts.switchTo(account)
+                            }
+                        }
+                    }
+                }
+                .padding(AppSpacing.medium)
+                .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: AppSpacing.small))
+            }
+
+            if let failure = accounts.lastSwitchFailure {
+                Label(failure, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    // MARK: - Settings
+
+    private var fallbackSettings: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.small) {
+            Text(String(localized: "When a push is refused"))
+                .font(.headline)
+
+            Toggle(String(localized: "Retry with the other signed-in accounts"), isOn: fallbackBinding)
+
+            Toggle(String(localized: "Check account access before syncing"), isOn: accessCheckBinding)
+
+            Text(String(localized: "homerun always puts the account that was active back afterwards, whether or not a retry worked."))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Associations
+
+    private var associations: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.small) {
+            Text(String(localized: "Preferred account per repository"))
+                .font(.headline)
+
+            ForEach(repositories.repositories) { repository in
+                VStack(alignment: .leading, spacing: AppSpacing.xsmall) {
+                    Picker(repository.name, selection: accountBinding(for: repository)) {
+                        Text(String(localized: "No preference")).tag(String?.none)
+
+                        ForEach(accounts.accounts) { account in
+                            Text(account.login).tag(String?.some(account.login))
+                        }
+                    }
+
+                    if let explanation = accounts.inapplicabilityExplanation(for: repository) {
+                        Text(explanation)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private var fallbackBinding: Binding<Bool> {
+        Binding(
+            get: { settings.preferences.accountFallbackEnabled },
+            set: { accounts.setFallbackEnabled($0) }
+        )
+    }
+
+    private var accessCheckBinding: Binding<Bool> {
+        Binding(
+            get: { settings.preferences.accountAccessChecksEnabled },
+            set: { accounts.setAccessChecksEnabled($0) }
+        )
+    }
+
+    private func accountBinding(for repository: TrackedRepository) -> Binding<String?> {
+        Binding(
+            get: { repository.shared.preferredGitHubAccount },
+            set: { login in
+                Task {
+                    await accounts.associate(login, with: repository)
+                }
+            }
+        )
+    }
+}
+
+#if DEBUG
+#Preview("Signed in") {
+    GitHubAccountsScreen()
+        .environment(\.accountsService, PreviewGraph.populated.accounts)
+        .environment(\.repositoriesService, PreviewGraph.populated.repositories)
+        .environment(\.settingsService, PreviewGraph.populated.settings)
+        .frame(width: 720, height: 620)
+}
+
+#Preview("gh missing") {
+    GitHubAccountsScreen()
+        .environment(
+            \.accountsService,
+            PreviewGraph.make(repositories: [], paths: [:], snapshots: [:], gitHubAvailable: false).accounts
+        )
+        .environment(\.repositoriesService, PreviewGraph.empty.repositories)
+        .environment(\.settingsService, PreviewGraph.empty.settings)
+        .frame(width: 720, height: 620)
+}
+
+#Preview("Long names") {
+    GitHubAccountsScreen()
+        .environment(\.accountsService, PreviewGraph.longNames.accounts)
+        .environment(\.repositoriesService, PreviewGraph.longNames.repositories)
+        .environment(\.settingsService, PreviewGraph.longNames.settings)
+        .frame(width: 720, height: 620)
+}
+#endif
