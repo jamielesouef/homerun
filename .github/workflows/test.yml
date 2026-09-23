@@ -13,4 +13,5 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.app
       - name: Run tests
+        working-directory: cli
         run: swift test
