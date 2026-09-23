@@ -2,6 +2,7 @@ import Foundation
 
 enum RepositoryStatus: String, Equatable, CaseIterable {
     case notCloned
+    case loading
     case failed
     case diverged
     case dirty
@@ -14,6 +15,8 @@ enum RepositoryStatus: String, Equatable, CaseIterable {
         switch self {
         case .notCloned:
             String(localized: "Not cloned")
+        case .loading:
+            String(localized: "Reading")
         case .failed:
             String(localized: "Failed")
         case .diverged:
@@ -35,6 +38,8 @@ enum RepositoryStatus: String, Equatable, CaseIterable {
         switch self {
         case .notCloned:
             "icloud.and.arrow.down"
+        case .loading:
+            "circle.dotted"
         case .failed:
             "exclamationmark.triangle.fill"
         case .diverged:

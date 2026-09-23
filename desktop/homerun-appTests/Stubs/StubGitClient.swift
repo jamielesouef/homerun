@@ -23,6 +23,33 @@ actor StubGitClient: GitClienting {
     var existingBranches: Set<String> = []
     var knownCommits: Set<String> = []
 
+    // MARK: - Snapshot gate
+
+    private var isHoldingSnapshots = false
+    private var heldSnapshot: CheckedContinuation<Void, Never>?
+    private var awaitingRequest: CheckedContinuation<Void, Never>?
+    private var hasRequestedSnapshot = false
+
+    func holdSnapshots() {
+        isHoldingSnapshots = true
+    }
+
+    func releaseSnapshots() {
+        isHoldingSnapshots = false
+        heldSnapshot?.resume()
+        heldSnapshot = nil
+    }
+
+    func waitUntilSnapshotRequested() async {
+        guard hasRequestedSnapshot == false else {
+            return
+        }
+
+        await withCheckedContinuation { continuation in
+            awaitingRequest = continuation
+        }
+    }
+
     // MARK: - Recording
 
     private(set) var calls: [String] = []
@@ -95,6 +122,15 @@ actor StubGitClient: GitClienting {
 
     func snapshot(at url: URL) async throws(GitError) -> GitRepositorySnapshot {
         calls.append("snapshot")
+        hasRequestedSnapshot = true
+        awaitingRequest?.resume()
+        awaitingRequest = nil
+
+        if isHoldingSnapshots {
+            await withCheckedContinuation { continuation in
+                heldSnapshot = continuation
+            }
+        }
 
         if let snapshotError {
             throw snapshotError

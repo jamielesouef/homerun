@@ -83,6 +83,19 @@ struct RepositoryRowView: View {
     .frame(width: 320, height: 240)
 }
 
+#Preview("Still being read") {
+    List {
+        RepositoryRowView(
+            repository: TrackedRepository(
+                shared: PreviewGraph.sampleRepositories[0],
+                localPath: URL(filePath: "/dev/app"),
+                isLoadingSnapshot: true
+            )
+        )
+    }
+    .frame(width: 320, height: 100)
+}
+
 #Preview("Long name") {
     List {
         RepositoryRowView(

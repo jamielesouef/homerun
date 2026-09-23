@@ -22,7 +22,8 @@ enum TodaySummaryUseCase {
              .diverged,
              .unreadable:
             return true
-        case .notCloned:
+        case .notCloned,
+             .loading:
             return false
         case .clean,
              .dirty,

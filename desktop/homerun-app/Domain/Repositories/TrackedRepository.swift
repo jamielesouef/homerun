@@ -6,6 +6,7 @@ struct TrackedRepository: Equatable, Identifiable {
     let snapshot: GitRepositorySnapshot?
     let lastSyncOutcome: RepositorySyncOutcome?
     let readError: GitError?
+    let isLoadingSnapshot: Bool
 
     var id: String {
         shared.identifier
@@ -20,17 +21,23 @@ struct TrackedRepository: Equatable, Identifiable {
     }
 
     var status: RepositoryStatus {
-        switch (isCloned, readError, lastSyncOutcome?.didFail == true, snapshot) {
-        case (false, _, _, _):
-            .notCloned
-        case (_, _?, _, _):
-            .unreadable
-        case (_, nil, true, _):
-            .failed
-        case (_, nil, false, let snapshot?):
-            Self.status(for: snapshot)
-        case (_, nil, false, nil):
-            .unreadable
+        guard isCloned else {
+            return .notCloned
+        }
+
+        guard isLoadingSnapshot == false else {
+            return .loading
+        }
+
+        switch (readError, lastSyncOutcome?.didFail == true, snapshot) {
+        case (_?, _, _):
+            return .unreadable
+        case (nil, true, _):
+            return .failed
+        case (nil, false, let snapshot?):
+            return Self.status(for: snapshot)
+        case (nil, false, nil):
+            return .unreadable
         }
     }
 
@@ -49,13 +56,15 @@ struct TrackedRepository: Equatable, Identifiable {
         localPath: URL? = nil,
         snapshot: GitRepositorySnapshot? = nil,
         lastSyncOutcome: RepositorySyncOutcome? = nil,
-        readError: GitError? = nil
+        readError: GitError? = nil,
+        isLoadingSnapshot: Bool = false
     ) {
         self.shared = shared
         self.localPath = localPath
         self.snapshot = snapshot
         self.lastSyncOutcome = lastSyncOutcome
         self.readError = readError
+        self.isLoadingSnapshot = isLoadingSnapshot
     }
 
     // MARK: - Helpers

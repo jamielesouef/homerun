@@ -142,6 +142,7 @@ final class RepositoriesService: SingleFlightRefreshing {
 
     func add(_ discovered: [DiscoveredRepository]) async {
         let existing = (try? sharedStore.loadRepositories()) ?? []
+        var added: [(shared: WorkspaceRepository, directory: URL)] = []
 
         for repository in RepositoryMaintenanceUseCase.deduplicated(discovered) {
             let remoteURL = try? await gitClient.remoteURL(at: repository.url)
@@ -154,12 +155,14 @@ final class RepositoriesService: SingleFlightRefreshing {
             )
 
             store { () throws(PersistenceError) in
-            try sharedStore.upsert(merged)
-        }
+                try sharedStore.upsert(merged)
+            }
             settings.recordLocalPath(repository.url, for: identifier)
+            added.append((merged, repository.url))
         }
 
-        await refresh()
+        showWhileReading(added)
+        await read(added)
     }
 
     // MARK: - Maintenance
@@ -320,6 +323,31 @@ final class RepositoriesService: SingleFlightRefreshing {
         }
 
         return loaded
+    }
+
+    private func showWhileReading(_ added: [(shared: WorkspaceRepository, directory: URL)]) {
+        for entry in added where repositories.contains(where: { $0.id == entry.shared.identifier }) == false {
+            repositories.append(
+                TrackedRepository(shared: entry.shared, localPath: entry.directory, isLoadingSnapshot: true)
+            )
+        }
+    }
+
+    private func read(_ added: [(shared: WorkspaceRepository, directory: URL)]) async {
+        for entry in added {
+            let loaded = await tracked(entry.shared, path: entry.directory.path(percentEncoded: false))
+
+            guard Task.isCancelled == false else {
+                return
+            }
+
+            guard let index = repositories.firstIndex(where: { $0.id == entry.shared.identifier }) else {
+                repositories.append(loaded)
+                continue
+            }
+
+            repositories[index] = loaded
+        }
     }
 
     private func tracked(_ repository: WorkspaceRepository, path: String?) async -> TrackedRepository {

@@ -186,6 +186,44 @@ struct RepositoriesServiceTests {
         #expect(harness.repositories.repositories.first?.snapshot != nil)
     }
 
+    @Test("shows a dropped repository straight away, before its status has been read")
+    @MainActor
+    func showsRepositoryWhileItsStatusLoads() async {
+        let harness = ServiceHarness()
+        await harness.repositories.start()
+        let directory = harness.makeDirectory("igloo")
+        await harness.gitClient.setSnapshot(RepositoryFixtures.snapshot(), at: directory)
+        await harness.gitClient.holdSnapshots()
+
+        let adding = Task { await harness.repositories.add([DiscoveredRepository(url: directory)]) }
+        await harness.gitClient.waitUntilSnapshotRequested()
+
+        #expect(harness.repositories.repositories.map(\.name) == ["igloo"])
+        #expect(harness.repositories.repositories.first?.status == .loading)
+
+        await harness.gitClient.releaseSnapshots()
+        await adding.value
+
+        #expect(harness.repositories.repositories.first?.status == .clean)
+    }
+
+    @Test("reads only the repository that was added rather than every tracked one")
+    @MainActor
+    func readsOnlyTheAddedRepository() async {
+        let harness = ServiceHarness()
+        await harness.addRepository("a", name: "existing", snapshot: RepositoryFixtures.snapshot())
+        await harness.repositories.start()
+        let directory = harness.makeDirectory("igloo")
+        await harness.gitClient.setSnapshot(RepositoryFixtures.snapshot(), at: directory)
+        let snapshotsBefore = await harness.gitClient.calls.count(where: { $0 == "snapshot" })
+
+        await harness.repositories.add([DiscoveredRepository(url: directory)])
+
+        let snapshotsAfter = await harness.gitClient.calls.count(where: { $0 == "snapshot" })
+        #expect(snapshotsAfter - snapshotsBefore == 1)
+        #expect(harness.repositories.repositories.count == 2)
+    }
+
     @Test("removing this Mac's path leaves the shared workspace entry in place")
     @MainActor
     func removesLocalPathOnly() async {

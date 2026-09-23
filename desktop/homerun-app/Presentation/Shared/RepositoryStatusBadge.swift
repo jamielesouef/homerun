@@ -8,11 +8,34 @@ struct RepositoryStatusBadge: View {
     // MARK: - View
 
     var body: some View {
-        Label(status.title, systemImage: status.symbolName)
+        content
             .font(.caption)
             .foregroundStyle(tint)
-            .labelStyle(.titleAndIcon)
             .accessibilityLabel(status.title)
+    }
+
+    // MARK: - Content
+
+    @ViewBuilder
+    private var content: some View {
+        switch status {
+        case .loading:
+            HStack(spacing: AppSpacing.xsmall) {
+                SnakeProgressView()
+
+                Text(status.title)
+            }
+        case .notCloned,
+             .failed,
+             .diverged,
+             .dirty,
+             .ahead,
+             .behind,
+             .clean,
+             .unreadable:
+            Label(status.title, systemImage: status.symbolName)
+                .labelStyle(.titleAndIcon)
+        }
     }
 
     // MARK: - Helpers
@@ -30,7 +53,8 @@ struct RepositoryStatusBadge: View {
              .failed,
              .unreadable:
             .red
-        case .notCloned:
+        case .notCloned,
+             .loading:
             .secondary
         }
     }
