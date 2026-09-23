@@ -45,32 +45,36 @@ struct TodayRepositoryRow: View {
 }
 
 #if DEBUG
-#Preview("Dirty with issues") {
-    TodayRepositoryRow(
-        repository: TrackedRepository(
-            shared: PreviewGraph.sampleRepositories[0],
-            localPath: URL(filePath: "/Users/preview/Developer/app"),
-            snapshot: PreviewGraph.snapshot(branch: "feature/login", ahead: 3)
-        ),
-        report: ReadinessReport(identifier: "a", currentBranchPushed: false, issues: [.untrackedFiles(["Notes.md"])]),
-        syncAction: {}
-    )
-    .padding()
-    .frame(width: 520)
-}
+    #Preview("Dirty with issues") {
+        TodayRepositoryRow(
+            repository: TrackedRepository(
+                shared: PreviewGraph.sampleRepositories[0],
+                localPath: URL(filePath: "/Users/preview/Developer/app"),
+                snapshot: PreviewGraph.snapshot(branch: "feature/login", ahead: 3)
+            ),
+            report: ReadinessReport(
+                identifier: "a",
+                currentBranchPushed: false,
+                issues: [.untrackedFiles(["Notes.md"])]
+            ),
+            syncAction: {}
+        )
+        .padding()
+        .frame(width: 520)
+    }
 
-#Preview("Not cloned, long name") {
-    TodayRepositoryRow(
-        repository: TrackedRepository(
-            shared: WorkspaceRepository(
-                identifier: "x",
-                name: "an-extremely-long-repository-name-that-wraps-onto-several-lines"
-            )
-        ),
-        report: nil,
-        syncAction: {}
-    )
-    .padding()
-    .frame(width: 520)
-}
+    #Preview("Not cloned, long name") {
+        TodayRepositoryRow(
+            repository: TrackedRepository(
+                shared: WorkspaceRepository(
+                    identifier: "x",
+                    name: "an-extremely-long-repository-name-that-wraps-onto-several-lines"
+                )
+            ),
+            report: nil,
+            syncAction: {}
+        )
+        .padding()
+        .frame(width: 520)
+    }
 #endif

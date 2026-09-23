@@ -16,7 +16,7 @@ final class GitHubAccountsService: SingleFlightRefreshing {
         switch (isLoading, error, accounts.isEmpty) {
         case (true, _, true):
             .loading
-        case (_, let error?, _):
+        case let (_, error?, _):
             .unavailable(error)
         case (_, nil, true):
             .empty

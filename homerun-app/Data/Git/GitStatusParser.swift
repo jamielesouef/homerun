@@ -23,11 +23,9 @@ enum GitStatusParser {
                 untracked.append(path)
                 continue
             }
-
             guard code != "!!" else {
                 continue
             }
-
             guard let status = status(for: code) else {
                 continue
             }

@@ -16,7 +16,7 @@ final class SyncService {
     private(set) var untrackedSelections: [String: Set<String>] = [:]
 
     var reviewPlan: SyncPlan? {
-        guard case .reviewing(let plan) = phase else {
+        guard case let .reviewing(plan) = phase else {
             return nil
         }
 
@@ -94,7 +94,7 @@ final class SyncService {
     }
 
     func run() async {
-        guard case .reviewing(let plan) = phase else {
+        guard case let .reviewing(plan) = phase else {
             return
         }
 
@@ -121,7 +121,7 @@ final class SyncService {
     }
 
     private func refreshReview() {
-        guard case .reviewing(let plan) = phase else {
+        guard case let .reviewing(plan) = phase else {
             return
         }
 
@@ -136,18 +136,30 @@ final class SyncService {
         let steps = plan.actionableSteps
         var outcomes: [RepositorySyncOutcome] = plan.blockedSteps.map(blockedOutcome)
 
-        phase = .running(SyncProgress(total: steps.count, completed: 0, currentRepositoryName: steps.first?.repositoryName))
+        phase = .running(SyncProgress(
+            total: steps.count,
+            completed: 0,
+            currentRepositoryName: steps.first?.repositoryName
+        ))
 
         for (index, step) in steps.enumerated() {
             guard Task.isCancelled == false else {
                 break
             }
 
-            phase = .running(SyncProgress(total: steps.count, completed: index, currentRepositoryName: step.repositoryName))
+            phase = .running(SyncProgress(
+                total: steps.count,
+                completed: index,
+                currentRepositoryName: step.repositoryName
+            ))
 
             guard let request = request(for: step) else {
                 outcomes.append(
-                    RepositorySyncOutcome(identifier: step.identifier, result: .failed(.notClonedLocally), finishedAt: clock.now())
+                    RepositorySyncOutcome(
+                        identifier: step.identifier,
+                        result: .failed(.notClonedLocally),
+                        finishedAt: clock.now()
+                    )
                 )
                 continue
             }
@@ -162,7 +174,7 @@ final class SyncService {
     }
 
     private func blockedOutcome(_ step: SyncPlanStep) -> RepositorySyncOutcome {
-        guard case .blocked(let failure) = step.action else {
+        guard case let .blocked(failure) = step.action else {
             return RepositorySyncOutcome(
                 identifier: step.identifier,
                 result: .skipped(String(localized: "Already up to date")),
@@ -174,12 +186,11 @@ final class SyncService {
     }
 
     private func request(for step: SyncPlanStep) -> RepositorySyncRequest? {
-        guard
-            case .commitAndPush(let willCommit, let setsUpstream) = step.action,
-            let repository = repositories.repository(identifier: step.identifier),
-            let directory = repository.localPath,
-            let branch = step.branch,
-            let remote = repository.snapshot?.defaultRemoteName
+        guard case let .commitAndPush(willCommit, setsUpstream) = step.action,
+              let repository = repositories.repository(identifier: step.identifier),
+              let directory = repository.localPath,
+              let branch = step.branch,
+              let remote = repository.snapshot?.defaultRemoteName
         else {
             return nil
         }

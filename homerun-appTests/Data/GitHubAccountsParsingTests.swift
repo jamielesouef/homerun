@@ -60,7 +60,10 @@ struct AccountFallbackUseCaseTests {
         #expect(AccountFallbackUseCase.appliesToRemote("https://github.com/acme/app.git"))
     }
 
-    @Test("does not apply to an SSH remote", arguments: ["git@github.com:acme/app.git", "ssh://git@github.com/acme/app.git"])
+    @Test(
+        "does not apply to an SSH remote",
+        arguments: ["git@github.com:acme/app.git", "ssh://git@github.com/acme/app.git"]
+    )
     func doesNotApplyToSSH(remote: String) {
         #expect(AccountFallbackUseCase.appliesToRemote(remote) == false)
         #expect(AccountFallbackUseCase.inapplicableExplanation(for: remote).contains("SSH"))

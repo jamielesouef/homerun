@@ -79,13 +79,13 @@ struct CleanerSettingsSection: View {
 }
 
 #if DEBUG
-#Preview("Cleaner settings") {
-    Form {
-        CleanerSettingsSection()
+    #Preview("Cleaner settings") {
+        Form {
+            CleanerSettingsSection()
+        }
+        .formStyle(.grouped)
+        .environment(\.settingsService, PreviewGraph.populated.settings)
+        .environment(\.cleanerService, PreviewGraph.populated.cleaner)
+        .frame(width: 620, height: 360)
     }
-    .formStyle(.grouped)
-    .environment(\.settingsService, PreviewGraph.populated.settings)
-    .environment(\.cleanerService, PreviewGraph.populated.cleaner)
-    .frame(width: 620, height: 360)
-}
 #endif

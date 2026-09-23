@@ -21,15 +21,15 @@ enum TodaySummaryUseCase {
         case .failed,
              .diverged,
              .unreadable:
-            return true
+            true
         case .notCloned,
              .loading:
-            return false
+            false
         case .clean,
              .dirty,
              .ahead,
              .behind:
-            return repository.snapshot?.hasRemote == false
+            repository.snapshot?.hasRemote == false
         }
     }
 
@@ -37,7 +37,6 @@ enum TodaySummaryUseCase {
         guard repository.isCloned, hasSyncProblem(repository) == false else {
             return false
         }
-
         guard let report = readiness[repository.id] else {
             return repository.hasLocalOnlyWork == false
         }

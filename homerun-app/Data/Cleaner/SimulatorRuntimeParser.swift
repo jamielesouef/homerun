@@ -15,7 +15,6 @@ enum SimulatorRuntimeParser {
         guard let data = json.data(using: .utf8) else {
             return []
         }
-
         guard let payloads = try? JSONDecoder().decode([String: Payload].self, from: data) else {
             return []
         }

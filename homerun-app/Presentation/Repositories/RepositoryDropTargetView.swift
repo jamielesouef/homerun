@@ -63,23 +63,23 @@ struct RepositoryDropTargetView: View {
 }
 
 #if DEBUG
-#Preview("Covering content underneath") {
-    VStack(alignment: .leading, spacing: AppSpacing.small) {
-        ForEach(0 ..< 12, id: \.self) { index in
-            Text(verbatim: "A repository row that should be hidden \(index)")
-                .font(.callout)
+    #Preview("Covering content underneath") {
+        VStack(alignment: .leading, spacing: AppSpacing.small) {
+            ForEach(0 ..< 12, id: \.self) { index in
+                Text(verbatim: "A repository row that should be hidden \(index)")
+                    .font(.callout)
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(AppSpacing.regular)
+        .overlay {
+            RepositoryDropTargetView()
+        }
+        .frame(width: 620, height: 460)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    .padding(AppSpacing.regular)
-    .overlay {
-        RepositoryDropTargetView()
-    }
-    .frame(width: 620, height: 460)
-}
 
-#Preview("Narrow and short") {
-    RepositoryDropTargetView()
-        .frame(width: 240, height: 180)
-}
+    #Preview("Narrow and short") {
+        RepositoryDropTargetView()
+            .frame(width: 240, height: 180)
+    }
 #endif

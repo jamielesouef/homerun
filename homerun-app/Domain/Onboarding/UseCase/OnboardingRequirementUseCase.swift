@@ -41,7 +41,6 @@ enum OnboardingRequirementUseCase {
         guard availability.isGitAvailable else {
             return false
         }
-
         guard hasCompletedOnboarding == false else {
             return true
         }

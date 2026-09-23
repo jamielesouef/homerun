@@ -39,10 +39,10 @@ struct RootView: View {
 }
 
 #if DEBUG
-#Preview("Ready") {
-    RootView()
-        .environment(\.onboardingService, PreviewGraph.populated.onboarding)
-        .environment(\.repositoriesService, PreviewGraph.populated.repositories)
-        .frame(width: 900, height: 600)
-}
+    #Preview("Ready") {
+        RootView()
+            .environment(\.onboardingService, PreviewGraph.populated.onboarding)
+            .environment(\.repositoriesService, PreviewGraph.populated.repositories)
+            .frame(width: 900, height: 600)
+    }
 #endif

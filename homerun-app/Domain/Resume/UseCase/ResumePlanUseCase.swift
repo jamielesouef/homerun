@@ -43,15 +43,13 @@ enum ResumePlanUseCase {
         guard repository.isCloned else {
             return cloneAction(for: repository, workspaceRoot: workspaceRoot)
         }
-
         guard repository.readError == nil, let snapshot = repository.snapshot else {
             return .unreadable
         }
-
         guard snapshot.isDirty == false else {
-            return .blockedByLocalChanges(snapshot.workingTree.trackedChanges.count + snapshot.workingTree.untrackedPaths.count)
+            return .blockedByLocalChanges(snapshot.workingTree.trackedChanges.count + snapshot.workingTree
+                .untrackedPaths.count)
         }
-
         guard snapshot.isDiverged == false else {
             return .blockedByDivergence
         }
@@ -71,7 +69,6 @@ enum ResumePlanUseCase {
         guard let remoteURL = repository.shared.remoteURL, remoteURL.isEmpty == false else {
             return .noRemote
         }
-
         guard let workspaceRoot else {
             return .noWorkspaceRoot
         }
@@ -81,11 +78,13 @@ enum ResumePlanUseCase {
         return .clone(WorkspacePlanUseCase.destination(for: entry, workspaceRoot: workspaceRoot))
     }
 
-    private static func handoffAction(for repository: TrackedRepository, snapshot: GitRepositorySnapshot) -> ResumeAction? {
+    private static func handoffAction(
+        for repository: TrackedRepository,
+        snapshot: GitRepositorySnapshot
+    ) -> ResumeAction? {
         guard let handoff = repository.shared.handoff, handoff.branch != snapshot.currentBranch else {
             return nil
         }
-
         guard snapshot.branches.contains(where: { $0.name == handoff.branch }) else {
             return .handoffBranchMissing(handoff.branch)
         }

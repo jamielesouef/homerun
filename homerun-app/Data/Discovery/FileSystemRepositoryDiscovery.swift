@@ -20,12 +20,12 @@ struct FileSystemRepositoryDiscovery: @unchecked Sendable, RepositoryDiscovering
         maximumDepth: Int
     ) async -> [DiscoveredRepository] {
         var found: [DiscoveredRepository] = []
+        let options = ScanOptions(maximumDepth: maximumDepth, ignoredFolderNames: ignoredFolderNames)
 
         scan(
             directory: root.standardizedFileURL,
             depth: 0,
-            maximumDepth: maximumDepth,
-            ignoredFolderNames: ignoredFolderNames,
+            options: options,
             inheritedRules: .empty,
             found: &found
         )
@@ -35,22 +35,24 @@ struct FileSystemRepositoryDiscovery: @unchecked Sendable, RepositoryDiscovering
 
     // MARK: - Helpers
 
+    private struct ScanOptions {
+        let maximumDepth: Int
+        let ignoredFolderNames: Set<String>
+    }
+
     private func scan(
         directory: URL,
         depth: Int,
-        maximumDepth: Int,
-        ignoredFolderNames: Set<String>,
+        options: ScanOptions,
         inheritedRules: GitIgnoreRules,
         found: inout [DiscoveredRepository]
     ) {
-        guard depth <= maximumDepth, Task.isCancelled == false else {
+        guard depth <= options.maximumDepth, Task.isCancelled == false else {
             return
         }
-
         guard isDirectory(directory) else {
             return
         }
-
         guard containsGitDirectory(directory) == false else {
             found.append(DiscoveredRepository(url: directory))
             return
@@ -69,14 +71,12 @@ struct FileSystemRepositoryDiscovery: @unchecked Sendable, RepositoryDiscovering
         for child in children.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
             let name = child.lastPathComponent
 
-            guard ignoredFolderNames.contains(name) == false else {
+            guard options.ignoredFolderNames.contains(name) == false else {
                 continue
             }
-
             guard isDirectory(child), isSymbolicLink(child) == false else {
                 continue
             }
-
             guard rules.ignores(name: name, isDirectory: true) == false else {
                 continue
             }
@@ -84,8 +84,7 @@ struct FileSystemRepositoryDiscovery: @unchecked Sendable, RepositoryDiscovering
             scan(
                 directory: child,
                 depth: depth + 1,
-                maximumDepth: maximumDepth,
-                ignoredFolderNames: ignoredFolderNames,
+                options: options,
                 inheritedRules: rules,
                 found: &found
             )

@@ -19,11 +19,9 @@ struct GitHubAccountPushFallback: PushFallbackPerforming {
         guard AccountFallbackUseCase.appliesToRemote(context.remoteURL) else {
             return .notApplicable(AccountFallbackUseCase.inapplicableExplanation(for: context.remoteURL))
         }
-
         guard await gitHubClient.isAvailable() else {
             return .notApplicable(GitHubCLIError.notInstalled.message)
         }
-
         guard let accounts = try? await gitHubClient.accounts(), accounts.isEmpty == false else {
             return .notApplicable(GitHubCLIError.notAuthenticated.message)
         }

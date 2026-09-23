@@ -69,12 +69,12 @@ struct DiscoverySettingsSection: View {
 }
 
 #if DEBUG
-#Preview("Discovery settings") {
-    Form {
-        DiscoverySettingsSection()
+    #Preview("Discovery settings") {
+        Form {
+            DiscoverySettingsSection()
+        }
+        .formStyle(.grouped)
+        .environment(\.settingsService, PreviewGraph.populated.settings)
+        .frame(width: 560, height: 420)
     }
-    .formStyle(.grouped)
-    .environment(\.settingsService, PreviewGraph.populated.settings)
-    .frame(width: 560, height: 420)
-}
 #endif

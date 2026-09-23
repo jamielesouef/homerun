@@ -32,12 +32,14 @@ struct ResumePlanUseCaseTests {
 
     @Test("identifies a repository that is missing from this Mac as one to clone")
     func identifiesMissingRepository() {
-        #expect(step(RepositoryFixtures.tracked(path: nil)).action == .clone(URL(filePath: "/Users/jamie/Developer/app")))
+        #expect(step(RepositoryFixtures.tracked(path: nil))
+            .action == .clone(URL(filePath: "/Users/jamie/Developer/app")))
     }
 
     @Test("fast-forwards a clean repository that is only behind")
     func fastForwardsCleanRepository() {
-        #expect(step(RepositoryFixtures.tracked(snapshot: RepositoryFixtures.snapshot(behind: 4))).action == .fastForward(4))
+        #expect(step(RepositoryFixtures.tracked(snapshot: RepositoryFixtures.snapshot(behind: 4)))
+            .action == .fastForward(4))
     }
 
     @Test("preselects a safe fast-forward only when the setting asks for it", arguments: [true, false])
@@ -65,12 +67,18 @@ struct ResumePlanUseCaseTests {
 
     @Test("flags a diverged branch rather than merging or rebasing it")
     func flagsDivergence() {
-        #expect(step(RepositoryFixtures.tracked(snapshot: RepositoryFixtures.snapshot(ahead: 1, behind: 1))).action == .blockedByDivergence)
+        #expect(step(RepositoryFixtures.tracked(snapshot: RepositoryFixtures.snapshot(ahead: 1, behind: 1)))
+            .action == .blockedByDivergence)
     }
 
     @Test("checks out the branch the previous Mac was on when it is already here")
     func checksOutHandoffBranch() {
-        let branches = [GitBranchRef(name: "feature/login", upstream: "origin/feature/login", aheadCount: 0, behindCount: 0)]
+        let branches = [GitBranchRef(
+            name: "feature/login",
+            upstream: "origin/feature/login",
+            aheadCount: 0,
+            behindCount: 0
+        )]
         let repository = withHandoff(
             RepositoryHandoff(branch: "feature/login", commit: "abc", recordedAt: .distantPast),
             snapshot: RepositoryFixtures.snapshot(branch: "main", branches: branches)

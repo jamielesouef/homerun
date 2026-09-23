@@ -7,7 +7,10 @@ struct SimctlRuntimeProviderTests {
     @Test("asks simctl for the installed runtimes as JSON")
     func asksSimctlForJSON() async {
         let runner = StubCommandRunner()
-        await runner.stub(["simctl", "runtime", "list"], output: #"{"A1":{"name":"iOS 18.0","sizeBytes":5,"deletable":true}}"#)
+        await runner.stub(
+            ["simctl", "runtime", "list"],
+            output: #"{"A1":{"name":"iOS 18.0","sizeBytes":5,"deletable":true}}"#
+        )
 
         let runtimes = await SimctlRuntimeProvider(commandRunner: runner, xcrunPath: "/usr/bin/xcrun").runtimes()
 
@@ -66,8 +69,11 @@ struct FileSystemDerivedDataProviderTests {
         let custom = root.appending(path: "custom")
         try makeFolder(custom, bytes: 512)
 
-        let entries = await FileSystemDerivedDataProvider(fileManager: fileManager, defaultDerivedDataURL: defaultLocation)
-            .entries(includesDefaultLocation: true, projectRoots: [project], customPaths: [custom])
+        let entries = await FileSystemDerivedDataProvider(
+            fileManager: fileManager,
+            defaultDerivedDataURL: defaultLocation
+        )
+        .entries(includesDefaultLocation: true, projectRoots: [project], customPaths: [custom])
 
         #expect(entries.map(\.source) == [.defaultLocation, .projectSpecific, .custom])
         #expect(entries.allSatisfy { $0.sizeBytes > 0 })
@@ -80,8 +86,11 @@ struct FileSystemDerivedDataProviderTests {
         let defaultLocation = root.appending(path: "DefaultDerivedData")
         try makeFolder(defaultLocation.appending(path: "app-abc"), bytes: 2048)
 
-        let entries = await FileSystemDerivedDataProvider(fileManager: fileManager, defaultDerivedDataURL: defaultLocation)
-            .entries(includesDefaultLocation: false, projectRoots: [], customPaths: [])
+        let entries = await FileSystemDerivedDataProvider(
+            fileManager: fileManager,
+            defaultDerivedDataURL: defaultLocation
+        )
+        .entries(includesDefaultLocation: false, projectRoots: [], customPaths: [])
 
         #expect(entries.isEmpty)
     }

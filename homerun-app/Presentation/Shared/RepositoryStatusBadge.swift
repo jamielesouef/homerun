@@ -61,12 +61,12 @@ struct RepositoryStatusBadge: View {
 }
 
 #if DEBUG
-#Preview("Every status") {
-    VStack(alignment: .leading, spacing: AppSpacing.small) {
-        ForEach(RepositoryStatus.allCases, id: \.rawValue) { status in
-            RepositoryStatusBadge(status: status)
+    #Preview("Every status") {
+        VStack(alignment: .leading, spacing: AppSpacing.small) {
+            ForEach(RepositoryStatus.allCases, id: \.rawValue) { status in
+                RepositoryStatusBadge(status: status)
+            }
         }
+        .padding(AppSpacing.regular)
     }
-    .padding(AppSpacing.regular)
-}
 #endif

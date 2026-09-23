@@ -35,7 +35,6 @@ struct GitIgnoreRules: Equatable {
             guard pattern.directoriesOnly == false || isDirectory else {
                 continue
             }
-
             guard matches(name: name, pattern: pattern.text) else {
                 continue
             }

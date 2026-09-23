@@ -23,6 +23,7 @@ struct ProcessGitClientIntegrationTests {
         guard let fixture = try await makeFixture() else {
             return
         }
+
         defer { fixture.remove() }
 
         let snapshot = try await fixture.client.snapshot(at: fixture.workingCopy)
@@ -38,6 +39,7 @@ struct ProcessGitClientIntegrationTests {
         guard let fixture = try await makeFixture() else {
             return
         }
+
         defer { fixture.remove() }
         try fixture.write("second\n", to: "README.md")
         try fixture.write("notes\n", to: "Notes.md")
@@ -53,6 +55,7 @@ struct ProcessGitClientIntegrationTests {
         guard let fixture = try await makeFixture() else {
             return
         }
+
         defer { fixture.remove() }
         try fixture.write("second\n", to: "Extra.md")
         try await fixture.git(["add", "Extra.md"], at: fixture.workingCopy)
@@ -72,6 +75,7 @@ struct ProcessGitClientIntegrationTests {
         guard let fixture = try await makeFixture() else {
             return
         }
+
         defer { fixture.remove() }
         try fixture.write("second\n", to: "README.md")
         try fixture.write("notes\n", to: "Notes.md")
@@ -88,9 +92,13 @@ struct ProcessGitClientIntegrationTests {
         guard let fixture = try await makeFixture() else {
             return
         }
+
         defer { fixture.remove() }
         try fixture.write("build/\n", to: ".gitignore")
-        try FileManager.default.createDirectory(at: fixture.workingCopy.appending(path: "build"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: fixture.workingCopy.appending(path: "build"),
+            withIntermediateDirectories: true
+        )
         try fixture.write("binary\n", to: "build/output.o")
 
         let snapshot = try await fixture.client.snapshot(at: fixture.workingCopy)
@@ -103,6 +111,7 @@ struct ProcessGitClientIntegrationTests {
         guard let fixture = try await makeFixture() else {
             return
         }
+
         defer { fixture.remove() }
         try fixture.write("second\n", to: "README.md")
         try await fixture.client.stageTrackedChanges(at: fixture.workingCopy)
@@ -120,6 +129,7 @@ struct ProcessGitClientIntegrationTests {
         guard let fixture = try await makeFixture() else {
             return
         }
+
         defer { fixture.remove() }
         try await fixture.git(["branch", "spike"], at: fixture.workingCopy)
 
@@ -133,6 +143,7 @@ struct ProcessGitClientIntegrationTests {
         guard let fixture = try await makeFixture() else {
             return
         }
+
         defer { fixture.remove() }
         try await fixture.git(["tag", "v1.0"], at: fixture.workingCopy)
 
@@ -147,6 +158,7 @@ struct ProcessGitClientIntegrationTests {
         guard let fixture = try await makeFixture() else {
             return
         }
+
         defer { fixture.remove() }
         let clone = fixture.root.appending(path: "clone")
         try await fixture.client.clone(remoteURL: fixture.remote.path(percentEncoded: false), into: clone)
@@ -167,6 +179,7 @@ struct ProcessGitClientIntegrationTests {
         guard let fixture = try await makeFixture() else {
             return
         }
+
         defer { fixture.remove() }
         let clone = fixture.root.appending(path: "clone")
         try await fixture.client.clone(remoteURL: fixture.remote.path(percentEncoded: false), into: clone)

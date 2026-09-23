@@ -10,14 +10,14 @@ permissions:
 
 jobs:
   release:
-    runs-on: macos-15
+    runs-on: macos-27
     env:
       TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.app
+        run: sudo xcode-select -s /Applications/Xcode_27.app
 
       - name: Build arm64
         working-directory: cli
@@ -31,8 +31,7 @@ jobs:
         run: |
           mkdir -p dist
           lipo -create -output dist/homerun \
-            cli/.build/arm64-apple-macosx/release/homerun \
-            cli/.build/x86_64-apple-macosx/release/homerun
+            cli/.build/arm64-apple-macosx/release/homerun
           chmod +x dist/homerun
           lipo -info dist/homerun
 

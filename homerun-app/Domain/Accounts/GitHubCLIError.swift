@@ -13,9 +13,9 @@ enum GitHubCLIError: Error, Equatable {
             String(localized: "The GitHub CLI is not installed.")
         case .notAuthenticated:
             String(localized: "No GitHub account is signed in.")
-        case .switchFailed(let detail):
+        case let .switchFailed(detail):
             String(localized: "Could not switch account: \(detail)")
-        case .commandFailed(let detail):
+        case let .commandFailed(detail):
             detail
         case .cancelled:
             String(localized: "Cancelled.")

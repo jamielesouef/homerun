@@ -15,7 +15,10 @@ enum AccountFallbackUseCase {
         }
 
         return String(
-            localized: "This repository pushes over SSH, so git uses your SSH key rather than a GitHub CLI account. Switching accounts would not change the result."
+            localized: """
+            This repository pushes over SSH, so git uses your SSH key rather than a GitHub CLI \
+            account. Switching accounts would not change the result.
+            """
         )
     }
 

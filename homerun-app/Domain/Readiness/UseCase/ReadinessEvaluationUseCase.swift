@@ -5,10 +5,24 @@ enum ReadinessEvaluationUseCase {
         identifier: String,
         snapshot: GitRepositorySnapshot,
         repository: WorkspaceRepository,
-        unpushedTags: [String],
-        missingConfigurationTemplates: [String],
-        hasSetupInstructions: Bool
+        signals: ReadinessCheckSignals
     ) -> ReadinessReport {
+        let issues = branchIssues(for: snapshot)
+            + workingTreeIssues(for: snapshot)
+            + outstandingBranchIssues(for: snapshot)
+            + handoffReadinessIssues(snapshot: snapshot, repository: repository, signals: signals)
+
+        return ReadinessReport(
+            identifier: identifier,
+            currentBranchPushed: snapshot.isDiverged == false && snapshot.aheadCount == 0 && snapshot
+                .isDetached == false,
+            issues: issues
+        )
+    }
+
+    // MARK: - Private
+
+    private static func branchIssues(for snapshot: GitRepositorySnapshot) -> [ReadinessIssue] {
         var issues: [ReadinessIssue] = []
 
         if snapshot.isDetached {
@@ -25,6 +39,12 @@ enum ReadinessEvaluationUseCase {
             issues.append(.currentBranchNotPushed(snapshot.aheadCount))
         }
 
+        return issues
+    }
+
+    private static func workingTreeIssues(for snapshot: GitRepositorySnapshot) -> [ReadinessIssue] {
+        var issues: [ReadinessIssue] = []
+
         if snapshot.workingTree.trackedChanges.isEmpty == false {
             issues.append(.uncommittedChanges(snapshot.workingTree.trackedChanges.count))
         }
@@ -33,6 +53,11 @@ enum ReadinessEvaluationUseCase {
             issues.append(.untrackedFiles(snapshot.workingTree.untrackedPaths))
         }
 
+        return issues
+    }
+
+    private static func outstandingBranchIssues(for snapshot: GitRepositorySnapshot) -> [ReadinessIssue] {
+        var issues: [ReadinessIssue] = []
         let outstanding = snapshot.otherBranchesNeedingPush
         let localOnly = outstanding.filter(\.isLocalOnly).map(\.name)
         let unpushed = outstanding.filter { $0.isLocalOnly == false && $0.hasUnpushedCommits }.map(\.name)
@@ -45,30 +70,36 @@ enum ReadinessEvaluationUseCase {
             issues.append(.unpushedBranchCommits(unpushed))
         }
 
-        if unpushedTags.isEmpty == false {
-            issues.append(.unpushedTags(unpushedTags))
+        return issues
+    }
+
+    private static func handoffReadinessIssues(
+        snapshot: GitRepositorySnapshot,
+        repository: WorkspaceRepository,
+        signals: ReadinessCheckSignals
+    ) -> [ReadinessIssue] {
+        var issues: [ReadinessIssue] = []
+
+        if signals.unpushedTags.isEmpty == false {
+            issues.append(.unpushedTags(signals.unpushedTags))
         }
 
         if snapshot.submoduleChanges.isEmpty == false {
             issues.append(.submoduleChanges(snapshot.submoduleChanges.map(\.path)))
         }
 
-        if hasSetupInstructions == false {
+        if signals.hasSetupInstructions == false {
             issues.append(.missingSetupInstructions)
         }
 
-        if missingConfigurationTemplates.isEmpty == false {
-            issues.append(.missingConfigurationTemplates(missingConfigurationTemplates))
+        if signals.missingConfigurationTemplates.isEmpty == false {
+            issues.append(.missingConfigurationTemplates(signals.missingConfigurationTemplates))
         }
 
         if repository.requiredEnvironmentVariableNames.isEmpty == false {
             issues.append(.requiredEnvironmentVariables(repository.requiredEnvironmentVariableNames))
         }
 
-        return ReadinessReport(
-            identifier: identifier,
-            currentBranchPushed: snapshot.isDiverged == false && snapshot.aheadCount == 0 && snapshot.isDetached == false,
-            issues: issues
-        )
+        return issues
     }
 }

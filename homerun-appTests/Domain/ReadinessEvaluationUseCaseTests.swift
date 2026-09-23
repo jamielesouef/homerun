@@ -17,9 +17,11 @@ struct ReadinessEvaluationUseCaseTests {
             identifier: "app",
             snapshot: snapshot,
             repository: repository,
-            unpushedTags: unpushedTags,
-            missingConfigurationTemplates: missingTemplates,
-            hasSetupInstructions: hasSetupInstructions
+            signals: ReadinessCheckSignals(
+                unpushedTags: unpushedTags,
+                missingConfigurationTemplates: missingTemplates,
+                hasSetupInstructions: hasSetupInstructions
+            )
         )
     }
 
@@ -83,7 +85,9 @@ struct ReadinessEvaluationUseCaseTests {
 
     @Test("reports tags that exist only on this Mac")
     func reportsUnpushedTags() {
-        #expect(report(snapshot: RepositoryFixtures.snapshot(), unpushedTags: ["v2.0"]).issues.contains(.unpushedTags(["v2.0"])))
+        #expect(report(snapshot: RepositoryFixtures.snapshot(), unpushedTags: ["v2.0"])
+            .issues
+            .contains(.unpushedTags(["v2.0"])))
     }
 
     @Test("reports submodules that need attention")
@@ -96,7 +100,9 @@ struct ReadinessEvaluationUseCaseTests {
 
     @Test("flags missing setup instructions")
     func flagsMissingSetupInstructions() {
-        #expect(report(snapshot: RepositoryFixtures.snapshot(), hasSetupInstructions: false).issues.contains(.missingSetupInstructions))
+        #expect(report(snapshot: RepositoryFixtures.snapshot(), hasSetupInstructions: false)
+            .issues
+            .contains(.missingSetupInstructions))
     }
 
     @Test("flags configuration templates the manifest expects but the repository lacks")

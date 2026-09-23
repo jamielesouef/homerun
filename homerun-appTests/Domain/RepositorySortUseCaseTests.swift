@@ -20,7 +20,12 @@ struct RepositorySortUseCaseTests {
         snapshot: RepositoryFixtures.snapshot(tracked: [GitFileChange(path: "A", status: .modified)]),
         lastSynced: Date(timeIntervalSince1970: 300)
     )
-    private let gamma = RepositoryFixtures.tracked("c", name: "Gamma", path: "/m/gamma", snapshot: RepositoryFixtures.snapshot())
+    private let gamma = RepositoryFixtures.tracked(
+        "c",
+        name: "Gamma",
+        path: "/m/gamma",
+        snapshot: RepositoryFixtures.snapshot()
+    )
 
     private var all: [TrackedRepository] {
         [gamma, alpha, beta]

@@ -54,7 +54,12 @@ final class ServiceHarness {
     }
 
     func makeResume() -> ResumeService {
-        ResumeService(gitClient: gitClient, repositories: repositories, settings: settings, projectOpener: projectOpener)
+        ResumeService(
+            gitClient: gitClient,
+            repositories: repositories,
+            settings: settings,
+            projectOpener: projectOpener
+        )
     }
 
     func makeWorkspace() -> WorkspaceService {

@@ -42,34 +42,40 @@ struct ResumeStepRow: View {
 }
 
 #if DEBUG
-#Preview("Each action") {
-    VStack(spacing: AppSpacing.small) {
-        ResumeStepRow(
-            step: ResumeStep(
-                identifier: "a",
-                name: "app",
-                action: .clone(URL(filePath: "/Users/preview/Developer/app")),
-                handoff: RepositoryHandoff(branch: "feature/login", commit: "abc1234def", recordedAt: .now),
-                isSelected: true
-            ),
-            isSelected: .constant(true)
-        )
-        ResumeStepRow(
-            step: ResumeStep(identifier: "b", name: "tooling", action: .fastForward(4), handoff: nil, isSelected: true),
-            isSelected: .constant(true)
-        )
-        ResumeStepRow(
-            step: ResumeStep(
-                identifier: "c",
-                name: "an-extremely-long-repository-name-that-wraps-onto-several-lines",
-                action: .blockedByLocalChanges(7),
-                handoff: nil,
-                isSelected: false
-            ),
-            isSelected: .constant(false)
-        )
+    #Preview("Each action") {
+        VStack(spacing: AppSpacing.small) {
+            ResumeStepRow(
+                step: ResumeStep(
+                    identifier: "a",
+                    name: "app",
+                    action: .clone(URL(filePath: "/Users/preview/Developer/app")),
+                    handoff: RepositoryHandoff(branch: "feature/login", commit: "abc1234def", recordedAt: .now),
+                    isSelected: true
+                ),
+                isSelected: .constant(true)
+            )
+            ResumeStepRow(
+                step: ResumeStep(
+                    identifier: "b",
+                    name: "tooling",
+                    action: .fastForward(4),
+                    handoff: nil,
+                    isSelected: true
+                ),
+                isSelected: .constant(true)
+            )
+            ResumeStepRow(
+                step: ResumeStep(
+                    identifier: "c",
+                    name: "an-extremely-long-repository-name-that-wraps-onto-several-lines",
+                    action: .blockedByLocalChanges(7),
+                    handoff: nil,
+                    isSelected: false
+                ),
+                isSelected: .constant(false)
+            )
+        }
+        .padding()
+        .frame(width: 520)
     }
-    .padding()
-    .frame(width: 520)
-}
 #endif

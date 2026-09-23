@@ -39,7 +39,8 @@ struct WorkspaceManifestEntry: Equatable, Codable, Identifiable {
         identifier = repository.identifier
         name = repository.name
         remoteURL = repository.remoteURL
-        preferredRelativePath = repository.preferredRelativePath.isEmpty ? repository.name : repository.preferredRelativePath
+        preferredRelativePath = repository.preferredRelativePath.isEmpty ? repository.name : repository
+            .preferredRelativePath
         allowsMainBranchSync = repository.allowsMainBranchSync
         allowsMasterBranchSync = repository.allowsMasterBranchSync
         wipCommitPrefixOverride = repository.wipCommitPrefixOverride

@@ -9,8 +9,8 @@ enum AccountFallbackResult: Equatable {
         switch self {
         case .notApplicable:
             []
-        case .succeeded(_, let attempts),
-             .exhausted(let attempts):
+        case let .succeeded(_, attempts),
+             let .exhausted(attempts):
             attempts
         }
     }

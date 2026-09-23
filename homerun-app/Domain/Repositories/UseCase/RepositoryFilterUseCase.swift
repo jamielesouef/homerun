@@ -4,17 +4,17 @@ enum RepositoryFilterUseCase {
     static func matches(_ repository: TrackedRepository, filter: RepositoryStatusFilter) -> Bool {
         switch filter {
         case .all:
-            return true
+            true
         case .dirty:
-            return repository.snapshot?.isDirty == true
+            repository.snapshot?.isDirty == true
         case .clean:
-            return repository.status == .clean
+            repository.status == .clean
         case .ahead:
-            return (repository.snapshot?.aheadCount ?? 0) > 0
+            (repository.snapshot?.aheadCount ?? 0) > 0
         case .behind:
-            return (repository.snapshot?.behindCount ?? 0) > 0
+            (repository.snapshot?.behindCount ?? 0) > 0
         case .failed:
-            return repository.status == .failed || repository.status == .unreadable
+            repository.status == .failed || repository.status == .unreadable
         }
     }
 
@@ -30,11 +30,9 @@ enum RepositoryFilterUseCase {
             guard matches(repository, filter: filter) else {
                 return false
             }
-
             guard showsCleanRepositories || repository.status != .clean else {
                 return false
             }
-
             guard trimmed.isEmpty == false else {
                 return true
             }

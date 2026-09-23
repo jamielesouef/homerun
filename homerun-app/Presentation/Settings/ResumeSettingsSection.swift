@@ -71,12 +71,12 @@ struct ResumeSettingsSection: View {
 }
 
 #if DEBUG
-#Preview("Resume settings") {
-    Form {
-        ResumeSettingsSection()
+    #Preview("Resume settings") {
+        Form {
+            ResumeSettingsSection()
+        }
+        .formStyle(.grouped)
+        .environment(\.settingsService, PreviewGraph.populated.settings)
+        .frame(width: 560, height: 240)
     }
-    .formStyle(.grouped)
-    .environment(\.settingsService, PreviewGraph.populated.settings)
-    .frame(width: 560, height: 240)
-}
 #endif

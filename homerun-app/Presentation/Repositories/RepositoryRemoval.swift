@@ -20,7 +20,9 @@ struct RepositoryRemoval: Identifiable {
     var explanation: String {
         switch scope {
         case .local:
-            String(localized: "homerun will forget where they live on this Mac. The shared workspace entries stay, and no files are deleted.")
+            String(
+                localized: "homerun will forget where they live on this Mac. The shared workspace entries stay, and no files are deleted."
+            )
         case .shared:
             String(localized: "homerun will remove them from the workspace on every Mac. No files are deleted.")
         }

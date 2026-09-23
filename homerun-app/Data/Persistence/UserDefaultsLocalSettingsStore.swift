@@ -23,9 +23,8 @@ final class UserDefaultsLocalSettingsStore: LocalSettingsStoring {
     // MARK: - LocalSettingsStoring
 
     func load() -> LocalSettings {
-        guard
-            let data = defaults.data(forKey: Constants.key),
-            let decoded = try? JSONDecoder().decode(LocalSettings.self, from: data)
+        guard let data = defaults.data(forKey: Constants.key),
+              let decoded = try? JSONDecoder().decode(LocalSettings.self, from: data)
         else {
             return defaultSettings
         }

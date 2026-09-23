@@ -35,7 +35,8 @@ struct WIPCommitMessageUseCaseTests {
         (false, true, false)
     ])
     func combinesTheAppAndRepositoryTimestampSettings(appWide: Bool, repositoryOmits: Bool, expected: Bool) {
-        #expect(WIPCommitMessageUseCase.appendsTimestamp(appWide: appWide, repositoryOmits: repositoryOmits) == expected)
+        #expect(WIPCommitMessageUseCase
+            .appendsTimestamp(appWide: appWide, repositoryOmits: repositoryOmits) == expected)
     }
 
     @Test("leaves the timestamp off when the setting says not to append it")
@@ -59,7 +60,8 @@ struct BranchSyncPolicyUseCaseTests {
     func blocksProtectedBranches(branch: String) {
         let repository = RepositoryFixtures.shared()
 
-        #expect(BranchSyncPolicyUseCase.blockedReason(branch: branch, repository: repository) == .branchNotAllowed(branch))
+        #expect(BranchSyncPolicyUseCase
+            .blockedReason(branch: branch, repository: repository) == .branchNotAllowed(branch))
     }
 
     @Test("allows main once the repository opts in")
@@ -107,12 +109,14 @@ struct BranchSyncPolicyUseCaseTests {
 
     @Test("never blocks an ordinary feature branch")
     func allowsFeatureBranch() {
-        #expect(BranchSyncPolicyUseCase.blockedReason(branch: "feature/login", repository: RepositoryFixtures.shared()) == nil)
+        #expect(BranchSyncPolicyUseCase
+            .blockedReason(branch: "feature/login", repository: RepositoryFixtures.shared()) == nil)
     }
 
     @Test("reports a detached head as having no branch to push")
     func reportsDetachedHead() {
-        #expect(BranchSyncPolicyUseCase.blockedReason(branch: nil, repository: RepositoryFixtures.shared()) == .detachedHead)
+        #expect(BranchSyncPolicyUseCase
+            .blockedReason(branch: nil, repository: RepositoryFixtures.shared()) == .detachedHead)
     }
 }
 
@@ -129,7 +133,10 @@ struct SyncPlanUseCaseTests {
     @Test("plans a WIP commit and push when tracked files have changed")
     func plansCommitAndPush() {
         let repository = RepositoryFixtures.tracked(
-            snapshot: RepositoryFixtures.snapshot(branch: "feature/login", tracked: [GitFileChange(path: "A.swift", status: .modified)])
+            snapshot: RepositoryFixtures.snapshot(
+                branch: "feature/login",
+                tracked: [GitFileChange(path: "A.swift", status: .modified)]
+            )
         )
 
         #expect(step(repository).action == .commitAndPush(willCommit: true, setsUpstream: false))
@@ -137,14 +144,20 @@ struct SyncPlanUseCaseTests {
 
     @Test("plans a push with no commit when the branch is merely ahead")
     func plansPushOnly() {
-        let repository = RepositoryFixtures.tracked(snapshot: RepositoryFixtures.snapshot(branch: "feature/login", ahead: 2))
+        let repository = RepositoryFixtures.tracked(snapshot: RepositoryFixtures.snapshot(
+            branch: "feature/login",
+            ahead: 2
+        ))
 
         #expect(step(repository).action == .commitAndPush(willCommit: false, setsUpstream: false))
     }
 
     @Test("sets the upstream when the branch has never been pushed")
     func setsUpstreamForNewBranch() {
-        let repository = RepositoryFixtures.tracked(snapshot: RepositoryFixtures.snapshot(branch: "spike", upstream: nil))
+        let repository = RepositoryFixtures.tracked(snapshot: RepositoryFixtures.snapshot(
+            branch: "spike",
+            upstream: nil
+        ))
 
         #expect(step(repository).action == .commitAndPush(willCommit: false, setsUpstream: true))
     }
@@ -181,7 +194,11 @@ struct SyncPlanUseCaseTests {
 
     @Test("blocks the step rather than force-pushing a diverged branch")
     func blocksDivergedBranch() {
-        let repository = RepositoryFixtures.tracked(snapshot: RepositoryFixtures.snapshot(branch: "feature/login", ahead: 1, behind: 1))
+        let repository = RepositoryFixtures.tracked(snapshot: RepositoryFixtures.snapshot(
+            branch: "feature/login",
+            ahead: 1,
+            behind: 1
+        ))
 
         #expect(step(repository).action == .blocked(.diverged))
     }
@@ -232,7 +249,11 @@ struct SyncPlanUseCaseTests {
     func separatesActionableFromBlocked() {
         let plan = SyncPlanUseCase.plan(
             for: [
-                RepositoryFixtures.tracked("a", name: "a", snapshot: RepositoryFixtures.snapshot(branch: "feature/a", ahead: 1)),
+                RepositoryFixtures.tracked(
+                    "a",
+                    name: "a",
+                    snapshot: RepositoryFixtures.snapshot(branch: "feature/a", ahead: 1)
+                ),
                 RepositoryFixtures.tracked("b", name: "b", path: nil)
             ],
             untrackedSelections: [:]

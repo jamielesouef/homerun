@@ -32,11 +32,16 @@ struct GitHubAccountsScreen: View {
         case .loading:
             ProgressView()
                 .frame(maxWidth: .infinity)
-        case .unavailable(let error):
+        case let .unavailable(error):
             EmptyStateView(
                 symbolName: "person.crop.circle.badge.exclamationmark",
                 title: error.message,
-                message: String(localized: "Ordinary git sync still works with your existing git authentication. Account management and retrying a push with another account need gh."),
+                message: String(
+                    localized: """
+                    Ordinary git sync still works with your existing git authentication. Account \
+                    management and retrying a push with another account need gh.
+                    """
+                ),
                 actionTitle: String(localized: "Check again"),
                 action: { Task { await accounts.refresh() } }
             )
@@ -46,7 +51,7 @@ struct GitHubAccountsScreen: View {
                 title: String(localized: "No accounts signed in"),
                 message: String(localized: "Sign in with gh to manage accounts here.")
             )
-        case .loaded(let list):
+        case let .loaded(list):
             accountList(list)
         }
     }
@@ -107,10 +112,14 @@ struct GitHubAccountsScreen: View {
 
             Toggle(String(localized: "Check account access before syncing"), isOn: accessCheckBinding)
 
-            Text(String(localized: "homerun always puts the account that was active back afterwards, whether or not a retry worked."))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            Text(
+                String(
+                    localized: "homerun always puts the account that was active back afterwards, whether or not a retry worked."
+                )
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -169,30 +178,30 @@ struct GitHubAccountsScreen: View {
 }
 
 #if DEBUG
-#Preview("Signed in") {
-    GitHubAccountsScreen()
-        .environment(\.accountsService, PreviewGraph.populated.accounts)
-        .environment(\.repositoriesService, PreviewGraph.populated.repositories)
-        .environment(\.settingsService, PreviewGraph.populated.settings)
-        .frame(width: 720, height: 620)
-}
+    #Preview("Signed in") {
+        GitHubAccountsScreen()
+            .environment(\.accountsService, PreviewGraph.populated.accounts)
+            .environment(\.repositoriesService, PreviewGraph.populated.repositories)
+            .environment(\.settingsService, PreviewGraph.populated.settings)
+            .frame(width: 720, height: 620)
+    }
 
-#Preview("gh missing") {
-    GitHubAccountsScreen()
-        .environment(
-            \.accountsService,
-            PreviewGraph.make(repositories: [], paths: [:], snapshots: [:], gitHubAvailable: false).accounts
-        )
-        .environment(\.repositoriesService, PreviewGraph.empty.repositories)
-        .environment(\.settingsService, PreviewGraph.empty.settings)
-        .frame(width: 720, height: 620)
-}
+    #Preview("gh missing") {
+        GitHubAccountsScreen()
+            .environment(
+                \.accountsService,
+                PreviewGraph.make(repositories: [], paths: [:], snapshots: [:], gitHubAvailable: false).accounts
+            )
+            .environment(\.repositoriesService, PreviewGraph.empty.repositories)
+            .environment(\.settingsService, PreviewGraph.empty.settings)
+            .frame(width: 720, height: 620)
+    }
 
-#Preview("Long names") {
-    GitHubAccountsScreen()
-        .environment(\.accountsService, PreviewGraph.longNames.accounts)
-        .environment(\.repositoriesService, PreviewGraph.longNames.repositories)
-        .environment(\.settingsService, PreviewGraph.longNames.settings)
-        .frame(width: 720, height: 620)
-}
+    #Preview("Long names") {
+        GitHubAccountsScreen()
+            .environment(\.accountsService, PreviewGraph.longNames.accounts)
+            .environment(\.repositoriesService, PreviewGraph.longNames.repositories)
+            .environment(\.settingsService, PreviewGraph.longNames.settings)
+            .frame(width: 720, height: 620)
+    }
 #endif

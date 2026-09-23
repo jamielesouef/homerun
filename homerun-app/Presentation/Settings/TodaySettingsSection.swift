@@ -37,12 +37,12 @@ struct TodaySettingsSection: View {
 }
 
 #if DEBUG
-#Preview("Today settings") {
-    Form {
-        TodaySettingsSection()
+    #Preview("Today settings") {
+        Form {
+            TodaySettingsSection()
+        }
+        .formStyle(.grouped)
+        .environment(\.settingsService, PreviewGraph.populated.settings)
+        .frame(width: 560, height: 200)
     }
-    .formStyle(.grouped)
-    .environment(\.settingsService, PreviewGraph.populated.settings)
-    .frame(width: 560, height: 200)
-}
 #endif

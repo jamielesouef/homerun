@@ -48,19 +48,19 @@ enum ResumeAction: Equatable {
 
     var summary: String {
         switch self {
-        case .clone(let destination):
+        case let .clone(destination):
             String(localized: "Clone into \(destination.path(percentEncoded: false))")
-        case .fastForward(let count):
+        case let .fastForward(count):
             String(localized: "Fast-forward \(count) commit(s) from the remote")
-        case .checkoutHandoffBranch(let branch):
+        case let .checkoutHandoffBranch(branch):
             String(localized: "Check out \(branch), the branch used on the previous Mac")
         case .upToDate:
             String(localized: "Already up to date")
-        case .blockedByLocalChanges(let count):
+        case let .blockedByLocalChanges(count):
             String(localized: "\(count) local change(s) would be affected. Review them first.")
         case .blockedByDivergence:
             String(localized: "The branch has diverged from its remote. Resolve it by hand.")
-        case .handoffBranchMissing(let branch):
+        case let .handoffBranchMissing(branch):
             String(localized: "The branch \(branch) used on the previous Mac is not here yet. Fetch and try again.")
         case .noWorkspaceRoot:
             String(localized: "Set this Mac's workspace root before cloning")

@@ -9,13 +9,42 @@ enum AppDependencies {
 
     @MainActor
     static func makeGraph() -> AppGraph {
+        let core = makeCoreDependencies()
+        let repositories = makeRepositoriesService(core: core)
+        let engine = RepositorySyncEngine(
+            gitClient: core.gitClient,
+            gitHubClient: core.gitHubClient,
+            pushFallback: GitHubAccountPushFallback(gitClient: core.gitClient, gitHubClient: core.gitHubClient)
+        )
+
+        return makeAppGraph(core: core, repositories: repositories, engine: engine)
+    }
+
+    // MARK: - Private
+
+    private struct CoreDependencies {
+        let fileManager: FileManager
+        let resolver: ToolPathResolver
+        let commandRunner: ProcessCommandRunner
+        let sharedStore: any SharedWorkspaceStoring
+        let settings: SettingsService
+        let gitClient: ProcessGitClient
+        let gitHubClient: ProcessGitHubCLIClient
+        let clock: SystemClock
+    }
+
+    @MainActor
+    private static func makeCoreDependencies() -> CoreDependencies {
         let fileManager = FileManager.default
         let defaults = UserDefaults.standard
         let processEnvironment = ProcessInfo.processInfo.environment
         let temporaryDirectory = fileManager.temporaryDirectory
         let resolver = ToolPathResolver(fileManager: fileManager, searchDirectories: AppConstants.toolSearchDirectories)
 
-        let localStore = UserDefaultsLocalSettingsStore(defaults: defaults, defaultSettings: makeDefaultLocalSettings(resolver))
+        let localStore = UserDefaultsLocalSettingsStore(
+            defaults: defaults,
+            defaultSettings: makeDefaultLocalSettings(resolver)
+        )
         let sharedStore = makeSharedStore()
         let settings = SettingsService(sharedStore: sharedStore, localStore: localStore)
 
@@ -29,63 +58,85 @@ enum AppDependencies {
         )
         let gitHubClient = ProcessGitHubCLIClient(
             commandRunner: commandRunner,
-            gitHubCLIPath: resolver.resolve("gh", preferring: settings.localSettings.gitHubCLIPath) ?? "/opt/homebrew/bin/gh",
+            gitHubCLIPath: resolver
+                .resolve("gh", preferring: settings.localSettings.gitHubCLIPath) ?? "/opt/homebrew/bin/gh",
             scriptRunnerPath: resolver.resolve("osascript", preferring: nil) ?? "/usr/bin/osascript"
         )
         let clock = SystemClock(timeZone: TimeZone.current)
 
-        let repositories = RepositoriesService(
-            sharedStore: sharedStore,
-            gitClient: gitClient,
-            discovery: FileSystemRepositoryDiscovery(fileManager: fileManager),
-            readinessChecker: GitReadinessChecker(gitClient: gitClient, fileManager: fileManager),
+        return CoreDependencies(
             fileManager: fileManager,
-            clock: clock,
-            settings: settings
-        )
-
-        let engine = RepositorySyncEngine(
+            resolver: resolver,
+            commandRunner: commandRunner,
+            sharedStore: sharedStore,
+            settings: settings,
             gitClient: gitClient,
             gitHubClient: gitHubClient,
-            pushFallback: GitHubAccountPushFallback(gitClient: gitClient, gitHubClient: gitHubClient)
+            clock: clock
         )
+    }
 
-        return AppGraph(
-            settings: settings,
-            onboarding: OnboardingService(gitClient: gitClient, gitHubClient: gitHubClient, settings: settings),
+    @MainActor
+    private static func makeRepositoriesService(core: CoreDependencies) -> RepositoriesService {
+        RepositoriesService(
+            sharedStore: core.sharedStore,
+            gitClient: core.gitClient,
+            discovery: FileSystemRepositoryDiscovery(fileManager: core.fileManager),
+            readinessChecker: GitReadinessChecker(gitClient: core.gitClient, fileManager: core.fileManager),
+            fileManager: core.fileManager,
+            clock: core.clock,
+            settings: core.settings
+        )
+    }
+
+    @MainActor
+    private static func makeAppGraph(
+        core: CoreDependencies,
+        repositories: RepositoriesService,
+        engine: RepositorySyncEngine
+    ) -> AppGraph {
+        AppGraph(
+            settings: core.settings,
+            onboarding: OnboardingService(
+                gitClient: core.gitClient,
+                gitHubClient: core.gitHubClient,
+                settings: core.settings
+            ),
             repositories: repositories,
-            sync: SyncService(engine: engine, repositories: repositories, settings: settings, clock: clock),
+            sync: SyncService(engine: engine, repositories: repositories, settings: core.settings, clock: core.clock),
             resume: ResumeService(
-                gitClient: gitClient,
+                gitClient: core.gitClient,
                 repositories: repositories,
-                settings: settings,
+                settings: core.settings,
                 projectOpener: WorkspaceProjectOpener()
             ),
             workspace: WorkspaceService(
                 manifestStore: FileWorkspaceManifestStore(),
-                sharedStore: sharedStore,
+                sharedStore: core.sharedStore,
                 repositories: repositories,
-                settings: settings,
-                clock: clock
+                settings: core.settings,
+                clock: core.clock
             ),
-            accounts: GitHubAccountsService(client: gitHubClient, repositories: repositories, settings: settings),
+            accounts: GitHubAccountsService(
+                client: core.gitHubClient,
+                repositories: repositories,
+                settings: core.settings
+            ),
             cleaner: CleanerService(
                 runtimeProvider: SimctlRuntimeProvider(
-                    commandRunner: commandRunner,
-                    xcrunPath: resolver.resolve("xcrun", preferring: nil) ?? "/usr/bin/xcrun"
+                    commandRunner: core.commandRunner,
+                    xcrunPath: core.resolver.resolve("xcrun", preferring: nil) ?? "/usr/bin/xcrun"
                 ),
                 derivedDataProvider: FileSystemDerivedDataProvider(
-                    fileManager: fileManager,
-                    defaultDerivedDataURL: makeDefaultDerivedDataURL(fileManager)
+                    fileManager: core.fileManager,
+                    defaultDerivedDataURL: makeDefaultDerivedDataURL(core.fileManager)
                 ),
                 repositories: repositories,
-                settings: settings
+                settings: core.settings
             ),
             filePanel: AppKitFilePanelPresenter()
         )
     }
-
-    // MARK: - Private
 
     @MainActor
     private static func makeSharedStore() -> any SharedWorkspaceStoring {

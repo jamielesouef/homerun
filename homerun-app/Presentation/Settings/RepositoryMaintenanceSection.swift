@@ -48,12 +48,12 @@ struct RepositoryMaintenanceSection: View {
 }
 
 #if DEBUG
-#Preview("Maintenance") {
-    Form {
-        RepositoryMaintenanceSection()
+    #Preview("Maintenance") {
+        Form {
+            RepositoryMaintenanceSection()
+        }
+        .formStyle(.grouped)
+        .environment(\.repositoriesService, PreviewGraph.populated.repositories)
+        .frame(width: 560, height: 280)
     }
-    .formStyle(.grouped)
-    .environment(\.repositoriesService, PreviewGraph.populated.repositories)
-    .frame(width: 560, height: 280)
-}
 #endif

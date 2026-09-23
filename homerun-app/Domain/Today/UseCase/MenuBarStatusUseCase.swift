@@ -2,16 +2,15 @@ import Foundation
 
 enum MenuBarStatusUseCase {
     static func status(for summary: TodaySummary) -> MenuBarStatus {
-        let level: MenuBarStatus.Level
-
-        switch (summary.syncProblems.isEmpty, summary.unfinishedWork.isEmpty) {
-        case (false, _):
-            level = .problems
-        case (true, false):
-            level = .localOnlyWork
-        case (true, true):
-            level = .allClear
-        }
+        let level: MenuBarStatus.Level =
+            switch (summary.syncProblems.isEmpty, summary.unfinishedWork.isEmpty) {
+            case (false, _):
+                .problems
+            case (true, false):
+                .localOnlyWork
+            case (true, true):
+                .allClear
+            }
 
         return MenuBarStatus(
             level: level,

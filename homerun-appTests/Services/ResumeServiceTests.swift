@@ -54,7 +54,11 @@ struct ResumeServiceTests {
     func checksOutHandoffAfterClone() async {
         let harness = ServiceHarness()
         let handoff = RepositoryHandoff(branch: "feature/login", commit: "abc", recordedAt: .distantPast)
-        harness.addUnclonedRepository("a", name: "app", shared: RepositoryFixtures.shared("a", name: "app", handoff: handoff))
+        harness.addUnclonedRepository(
+            "a",
+            name: "app",
+            shared: RepositoryFixtures.shared("a", name: "app", handoff: handoff)
+        )
         harness.settings.updateLocalSettings { $0.workspaceRootPath = "/dev" }
         await harness.repositories.start()
         await harness.gitClient.setExistingBranches(["feature/login"])
@@ -113,7 +117,7 @@ struct ResumeServiceTests {
 
         await service.run()
 
-        guard case .finished(let summary) = service.phase else {
+        guard case let .finished(summary) = service.phase else {
             Issue.record("expected a finished summary")
             return
         }
@@ -131,7 +135,7 @@ struct ResumeServiceTests {
         service.prepare()
         await service.run()
 
-        guard case .finished(let summary) = service.phase, let outcome = summary.openableProjects.first else {
+        guard case let .finished(summary) = service.phase, let outcome = summary.openableProjects.first else {
             Issue.record("expected an openable project")
             return
         }
@@ -151,7 +155,7 @@ struct ResumeServiceTests {
         service.prepare()
         await service.run()
 
-        guard case .finished(let summary) = service.phase, let outcome = summary.openableProjects.first else {
+        guard case let .finished(summary) = service.phase, let outcome = summary.openableProjects.first else {
             Issue.record("expected an openable project")
             return
         }

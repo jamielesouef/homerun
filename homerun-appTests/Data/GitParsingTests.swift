@@ -10,7 +10,10 @@ struct GitSubmoduleParserTests {
         ("Uabc1234 Vendor/Lib", GitSubmoduleChange.Kind.mergeConflict)
     ])
     func mapsMarker(line: String, expected: GitSubmoduleChange.Kind) {
-        #expect(GitSubmoduleParser.parse(statusOutput: line) == [GitSubmoduleChange(path: "Vendor/Lib", kind: expected)])
+        #expect(GitSubmoduleParser.parse(statusOutput: line) == [GitSubmoduleChange(
+            path: "Vendor/Lib",
+            kind: expected
+        )])
     }
 
     @Test("ignores submodules that match their recorded commit")

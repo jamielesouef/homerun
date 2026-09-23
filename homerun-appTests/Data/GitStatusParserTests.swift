@@ -23,7 +23,11 @@ struct GitStatusParserTests {
     func readsRenameOriginal() {
         let status = GitStatusParser.parse(porcelainZ: "R  New.swift\0Old.swift\0 M Other.swift\0")
 
-        #expect(status.trackedChanges.first == GitFileChange(path: "New.swift", status: .renamed, originalPath: "Old.swift"))
+        #expect(status.trackedChanges.first == GitFileChange(
+            path: "New.swift",
+            status: .renamed,
+            originalPath: "Old.swift"
+        ))
         #expect(status.trackedChanges.count == 2)
         #expect(status.trackedChanges.last?.path == "Other.swift")
     }

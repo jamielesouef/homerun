@@ -35,7 +35,11 @@ struct CleanerScreen: View {
 
             Button(String(localized: "Cancel"), role: .cancel) {}
         } message: {
-            Text(String(localized: "This cannot be undone. homerun never touches SDKs bundled inside Xcode or an Xcode installation."))
+            Text(
+                String(
+                    localized: "This cannot be undone. homerun never touches SDKs bundled inside Xcode or an Xcode installation."
+                )
+            )
         }
     }
 
@@ -65,9 +69,11 @@ struct CleanerScreen: View {
             EmptyStateView(
                 symbolName: "sparkles",
                 title: String(localized: "Nothing to clean"),
-                message: String(localized: "No simulator runtimes or Derived Data were found in the places homerun looks.")
+                message: String(
+                    localized: "No simulator runtimes or Derived Data were found in the places homerun looks."
+                )
             )
-        case .loaded(let items):
+        case let .loaded(items):
             List {
                 ForEach(items) { item in
                     CleanupItemRow(item: item, isSelected: cleaner.isSelected(item)) {
@@ -125,23 +131,23 @@ struct CleanerScreen: View {
 }
 
 #if DEBUG
-#Preview("Populated") {
-    CleanerScreen()
-        .environment(\.cleanerService, PreviewGraph.populated.cleaner)
-        .frame(width: 720, height: 560)
-}
+    #Preview("Populated") {
+        CleanerScreen()
+            .environment(\.cleanerService, PreviewGraph.populated.cleaner)
+            .frame(width: 720, height: 560)
+    }
 
-#Preview("Empty") {
-    CleanerScreen()
-        .environment(
-            \.cleanerService,
-            CleanerService(
-                runtimeProvider: MockSimulatorRuntimeProvider(storedRuntimes: []),
-                derivedDataProvider: MockDerivedDataProvider(storedEntries: []),
-                repositories: PreviewGraph.empty.repositories,
-                settings: PreviewGraph.empty.settings
+    #Preview("Empty") {
+        CleanerScreen()
+            .environment(
+                \.cleanerService,
+                CleanerService(
+                    runtimeProvider: MockSimulatorRuntimeProvider(storedRuntimes: []),
+                    derivedDataProvider: MockDerivedDataProvider(storedEntries: []),
+                    repositories: PreviewGraph.empty.repositories,
+                    settings: PreviewGraph.empty.settings
+                )
             )
-        )
-        .frame(width: 720, height: 560)
-}
+            .frame(width: 720, height: 560)
+    }
 #endif

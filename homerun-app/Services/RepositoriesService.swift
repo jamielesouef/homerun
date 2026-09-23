@@ -301,7 +301,7 @@ final class RepositoriesService: SingleFlightRefreshing {
             return []
         }
 
-        return (try? await gitClient.recentCommits(at: directory, limit: limit)) ?? []
+        return await (try? gitClient.recentCommits(at: directory, limit: limit)) ?? []
     }
 
     func diffSummary(for repository: TrackedRepository) async -> String {
@@ -309,7 +309,7 @@ final class RepositoriesService: SingleFlightRefreshing {
             return ""
         }
 
-        return (try? await gitClient.diffSummary(at: directory)) ?? ""
+        return await (try? gitClient.diffSummary(at: directory)) ?? ""
     }
 
     // MARK: - Readiness
@@ -366,20 +366,22 @@ final class RepositoriesService: SingleFlightRefreshing {
         repositories = loaded
         isLoading = false
     }
+}
 
-    // MARK: - Helpers
+// MARK: - Helpers
 
-    private func load(_ shared: [WorkspaceRepository], paths: [String: String]) async -> [TrackedRepository] {
+private extension RepositoriesService {
+    func load(_ shared: [WorkspaceRepository], paths: [String: String]) async -> [TrackedRepository] {
         var loaded: [TrackedRepository] = []
 
         for repository in shared {
-            loaded.append(await tracked(repository, path: paths[repository.identifier]))
+            await loaded.append(tracked(repository, path: paths[repository.identifier]))
         }
 
         return loaded
     }
 
-    private func forgetLocalCheckout(of identifiers: Set<String>) {
+    func forgetLocalCheckout(of identifiers: Set<String>) {
         repositories = repositories.map { repository in
             guard identifiers.contains(repository.id) else {
                 return repository
@@ -389,7 +391,7 @@ final class RepositoriesService: SingleFlightRefreshing {
         }
     }
 
-    private func showWhileReading(_ added: [(shared: WorkspaceRepository, directory: URL)]) {
+    func showWhileReading(_ added: [(shared: WorkspaceRepository, directory: URL)]) {
         for entry in added where repositories.contains(where: { $0.id == entry.shared.identifier }) == false {
             repositories.append(
                 TrackedRepository(shared: entry.shared, localPath: entry.directory, isLoadingSnapshot: true)
@@ -397,14 +399,13 @@ final class RepositoriesService: SingleFlightRefreshing {
         }
     }
 
-    private func read(_ added: [(shared: WorkspaceRepository, directory: URL)]) async {
+    func read(_ added: [(shared: WorkspaceRepository, directory: URL)]) async {
         for entry in added {
             let loaded = await tracked(entry.shared, path: entry.directory.path(percentEncoded: false))
 
             guard Task.isCancelled == false else {
                 return
             }
-
             guard let index = repositories.firstIndex(where: { $0.id == entry.shared.identifier }) else {
                 repositories.append(loaded)
                 continue
@@ -414,7 +415,7 @@ final class RepositoriesService: SingleFlightRefreshing {
         }
     }
 
-    private func tracked(_ repository: WorkspaceRepository, path: String?) async -> TrackedRepository {
+    func tracked(_ repository: WorkspaceRepository, path: String?) async -> TrackedRepository {
         guard let path, fileManager.fileExists(atPath: path) else {
             return TrackedRepository(shared: repository, lastSyncOutcome: outcomes[repository.identifier])
         }
@@ -441,11 +442,10 @@ final class RepositoriesService: SingleFlightRefreshing {
         }
     }
 
-    private func record(_ outcome: RepositorySyncOutcome) {
-        guard case .succeeded(let commit, let branch) = outcome.result else {
+    func record(_ outcome: RepositorySyncOutcome) {
+        guard case let .succeeded(commit, branch) = outcome.result else {
             return
         }
-
         guard var repository = try? sharedStore.repository(identifier: outcome.identifier) else {
             return
         }
@@ -461,7 +461,7 @@ final class RepositoriesService: SingleFlightRefreshing {
         }
     }
 
-    private func store(_ work: () throws(PersistenceError) -> Void) {
+    func store(_ work: () throws(PersistenceError) -> Void) {
         do {
             try work()
             loadError = nil

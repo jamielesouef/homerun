@@ -8,4 +8,3 @@ enum AppSpacing {
     static let large: CGFloat = 24
     static let xlarge: CGFloat = 32
 }
-    

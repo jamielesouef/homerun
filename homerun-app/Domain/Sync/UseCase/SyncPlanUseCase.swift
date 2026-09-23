@@ -45,14 +45,16 @@ enum SyncPlanUseCase {
             return .blocked(.git(String(localized: "The repository could not be read.")))
         }
 
-        if let reason = BranchSyncPolicyUseCase.blockedReason(branch: snapshot.currentBranch, repository: repository.shared) {
+        if let reason = BranchSyncPolicyUseCase.blockedReason(
+            branch: snapshot.currentBranch,
+            repository: repository.shared
+        ) {
             return .blocked(reason)
         }
 
         guard snapshot.hasRemote else {
             return .blocked(.noRemote)
         }
-
         guard snapshot.isDiverged == false else {
             return .blocked(.diverged)
         }

@@ -58,9 +58,9 @@ struct MainSplitView: View {
             }
 
             #if DEBUG
-            Divider()
+                Divider()
 
-            DebugMenuView()
+                DebugMenuView()
             #endif
         }
         .navigationSplitViewColumnWidth(min: Constants.sidebarMinimum, ideal: Constants.sidebarIdeal)
@@ -102,17 +102,17 @@ struct MainSplitView: View {
 }
 
 #if DEBUG
-#Preview("Populated") {
-    MainSplitView()
-        .environment(\.repositoriesService, PreviewGraph.populated.repositories)
-        .environment(\.syncService, PreviewGraph.populated.sync)
-        .environment(\.resumeService, PreviewGraph.populated.resume)
-        .frame(width: 960, height: 640)
-}
+    #Preview("Populated") {
+        MainSplitView()
+            .environment(\.repositoriesService, PreviewGraph.populated.repositories)
+            .environment(\.syncService, PreviewGraph.populated.sync)
+            .environment(\.resumeService, PreviewGraph.populated.resume)
+            .frame(width: 960, height: 640)
+    }
 
-#Preview("Empty") {
-    MainSplitView()
-        .environment(\.repositoriesService, PreviewGraph.empty.repositories)
-        .frame(width: 960, height: 640)
-}
+    #Preview("Empty") {
+        MainSplitView()
+            .environment(\.repositoriesService, PreviewGraph.empty.repositories)
+            .frame(width: 960, height: 640)
+    }
 #endif

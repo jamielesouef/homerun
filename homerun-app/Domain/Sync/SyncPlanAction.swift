@@ -27,7 +27,7 @@ enum SyncPlanAction: Equatable {
             String(localized: "Push the current branch")
         case .nothingToDo:
             String(localized: "Already up to date")
-        case .blocked(let failure):
+        case let .blocked(failure):
             failure.message
         }
     }

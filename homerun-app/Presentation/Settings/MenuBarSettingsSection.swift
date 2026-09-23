@@ -43,12 +43,12 @@ struct MenuBarSettingsSection: View {
 }
 
 #if DEBUG
-#Preview("Menu bar settings") {
-    Form {
-        MenuBarSettingsSection()
+    #Preview("Menu bar settings") {
+        Form {
+            MenuBarSettingsSection()
+        }
+        .formStyle(.grouped)
+        .environment(\.settingsService, PreviewGraph.populated.settings)
+        .frame(width: 560, height: 200)
     }
-    .formStyle(.grouped)
-    .environment(\.settingsService, PreviewGraph.populated.settings)
-    .frame(width: 560, height: 200)
-}
 #endif

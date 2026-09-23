@@ -11,7 +11,11 @@ struct WorkspaceProjectOpener: ProjectOpening {
         let configuration = NSWorkspace.OpenConfiguration()
 
         do {
-            _ = try await NSWorkspace.shared.open([url], withApplicationAt: applicationURL, configuration: configuration)
+            _ = try await NSWorkspace.shared.open(
+                [url],
+                withApplicationAt: applicationURL,
+                configuration: configuration
+            )
         } catch {
             AppLog.error("Could not open \(url.lastPathComponent): \(error.localizedDescription)")
             return false

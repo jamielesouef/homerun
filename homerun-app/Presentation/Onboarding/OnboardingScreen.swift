@@ -44,9 +44,9 @@ struct OnboardingScreen: View {
         case .checking:
             ProgressView()
                 .frame(maxWidth: .infinity)
-        case .blocked(let requirements):
+        case let .blocked(requirements):
             requirementList(requirements)
-        case .optional(let requirements):
+        case let .optional(requirements):
             requirementList(requirements)
         case .ready:
             Label(String(localized: "Everything homerun needs is here."), systemImage: "checkmark.circle.fill")
@@ -125,21 +125,21 @@ struct OnboardingScreen: View {
 }
 
 #if DEBUG
-#Preview("Everything present") {
-    OnboardingScreen()
-        .environment(\.onboardingService, PreviewGraph.populated.onboarding)
-}
+    #Preview("Everything present") {
+        OnboardingScreen()
+            .environment(\.onboardingService, PreviewGraph.populated.onboarding)
+    }
 
-#Preview("gh missing") {
-    OnboardingScreen()
-        .environment(
-            \.onboardingService,
-            PreviewGraph.make(repositories: [], paths: [:], snapshots: [:], gitHubAvailable: false).onboarding
-        )
-}
+    #Preview("gh missing") {
+        OnboardingScreen()
+            .environment(
+                \.onboardingService,
+                PreviewGraph.make(repositories: [], paths: [:], snapshots: [:], gitHubAvailable: false).onboarding
+            )
+    }
 
-#Preview("Nothing checked yet") {
-    OnboardingScreen()
-        .environment(\.onboardingService, PreviewGraph.empty.onboarding)
-}
+    #Preview("Nothing checked yet") {
+        OnboardingScreen()
+            .environment(\.onboardingService, PreviewGraph.empty.onboarding)
+    }
 #endif

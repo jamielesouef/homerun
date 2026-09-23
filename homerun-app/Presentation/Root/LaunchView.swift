@@ -28,8 +28,8 @@ struct LaunchView: View {
 }
 
 #if DEBUG
-#Preview("Launch") {
-    LaunchView()
-        .frame(width: 420, height: 320)
-}
+    #Preview("Launch") {
+        LaunchView()
+            .frame(width: 420, height: 320)
+    }
 #endif

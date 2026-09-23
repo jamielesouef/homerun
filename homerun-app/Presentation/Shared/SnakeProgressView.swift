@@ -89,19 +89,19 @@ struct SnakeProgressView: View {
 }
 
 #if DEBUG
-#Preview("Beside text, as the badge uses it") {
-    HStack(spacing: AppSpacing.xsmall) {
-        SnakeProgressView()
+    #Preview("Beside text, as the badge uses it") {
+        HStack(spacing: AppSpacing.xsmall) {
+            SnakeProgressView()
 
-        Text(verbatim: "Reading")
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            Text(verbatim: "Reading")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(AppSpacing.regular)
     }
-    .padding(AppSpacing.regular)
-}
 
-#Preview("Larger, so the chase is visible") {
-    SnakeProgressView(size: 96)
-        .padding(AppSpacing.xlarge)
-}
+    #Preview("Larger, so the chase is visible") {
+        SnakeProgressView(size: 96)
+            .padding(AppSpacing.xlarge)
+    }
 #endif

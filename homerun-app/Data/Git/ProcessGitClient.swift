@@ -60,14 +60,7 @@ struct ProcessGitClient: GitClienting {
         )
         let upstreamBranch = upstreamResult?.trimmedOutput
 
-        var ahead = 0
-        var behind = 0
-        if upstreamBranch != nil {
-            let counts = try? await runChecked(["rev-list", "--left-right", "--count", "@{upstream}...HEAD"], at: url)
-            let parsed = GitAheadBehindParser.parse(revListOutput: counts?.standardOutput ?? "")
-            ahead = parsed.ahead
-            behind = parsed.behind
-        }
+        let (ahead, behind) = await aheadBehindCounts(upstreamBranch: upstreamBranch, at: url)
 
         let statusResult = try await run(
             ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
@@ -213,6 +206,17 @@ struct ProcessGitClient: GitClienting {
 
     // MARK: - Helpers
 
+    private func aheadBehindCounts(upstreamBranch: String?, at url: URL) async -> (ahead: Int, behind: Int) {
+        guard upstreamBranch != nil else {
+            return (0, 0)
+        }
+
+        let counts = try? await runChecked(["rev-list", "--left-right", "--count", "@{upstream}...HEAD"], at: url)
+        let parsed = GitAheadBehindParser.parse(revListOutput: counts?.standardOutput ?? "")
+
+        return (parsed.ahead, parsed.behind)
+    }
+
     private func run(_ arguments: [String], at url: URL?) async throws(GitError) -> CommandResult {
         let request = CommandRequest(
             executablePath: gitPath,
@@ -229,7 +233,7 @@ struct ProcessGitClient: GitClienting {
                 throw .gitUnavailable
             case .cancelled:
                 throw .cancelled
-            case .launchFailed(let message):
+            case let .launchFailed(message):
                 throw .commandFailed(message)
             case .outputUnreadable:
                 throw .commandFailed("Unable to read command output")

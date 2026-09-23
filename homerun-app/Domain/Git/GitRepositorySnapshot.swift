@@ -50,28 +50,4 @@ struct GitRepositorySnapshot: Equatable {
         branches: [],
         submoduleChanges: []
     )
-
-    init(
-        currentBranch: String?,
-        headCommit: String?,
-        defaultRemoteName: String?,
-        remoteURL: String?,
-        upstreamBranch: String?,
-        aheadCount: Int,
-        behindCount: Int,
-        workingTree: GitWorkingTreeStatus,
-        branches: [GitBranchRef],
-        submoduleChanges: [GitSubmoduleChange]
-    ) {
-        self.currentBranch = currentBranch
-        self.headCommit = headCommit
-        self.defaultRemoteName = defaultRemoteName
-        self.remoteURL = remoteURL
-        self.upstreamBranch = upstreamBranch
-        self.aheadCount = aheadCount
-        self.behindCount = behindCount
-        self.workingTree = workingTree
-        self.branches = branches
-        self.submoduleChanges = submoduleChanges
-    }
 }

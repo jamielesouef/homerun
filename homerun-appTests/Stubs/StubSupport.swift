@@ -5,7 +5,10 @@ struct StubClock: Clocking {
     let fixedNow: Date
     let timeZone: TimeZone
 
-    init(now: Date = Date(timeIntervalSince1970: 1_758_600_000), timeZone: TimeZone = TimeZone(identifier: "UTC") ?? .gmt) {
+    init(
+        now: Date = Date(timeIntervalSince1970: 1_758_600_000),
+        timeZone: TimeZone = TimeZone(identifier: "UTC") ?? .gmt
+    ) {
         fixedNow = now
         self.timeZone = timeZone
     }

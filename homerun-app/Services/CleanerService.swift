@@ -88,7 +88,6 @@ final class CleanerService: SingleFlightRefreshing {
         guard item.isDeletable else {
             return
         }
-
         guard selectedIdentifiers.insert(item.id).inserted == false else {
             return
         }
@@ -125,7 +124,7 @@ final class CleanerService: SingleFlightRefreshing {
         var outcomes: [CleanupOutcome] = []
 
         for item in selected {
-            outcomes.append(await remove(item))
+            await outcomes.append(remove(item))
         }
 
         lastOutcomes = outcomes
@@ -175,9 +174,9 @@ final class CleanerService: SingleFlightRefreshing {
 
         do {
             switch item.target {
-            case .simulatorRuntime(let identifier):
+            case let .simulatorRuntime(identifier):
                 try await runtimeProvider.delete(identifier: identifier)
-            case .derivedData(let url):
+            case let .derivedData(url):
                 try await derivedDataProvider.remove(at: url)
             }
         } catch {

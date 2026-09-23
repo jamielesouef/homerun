@@ -25,20 +25,20 @@ struct IssueListView: View {
 }
 
 #if DEBUG
-#Preview("No issues") {
-    IssueListView(issues: [])
+    #Preview("No issues") {
+        IssueListView(issues: [])
+            .padding(AppSpacing.regular)
+            .frame(width: 420)
+    }
+
+    #Preview("Several issues with long explanations") {
+        IssueListView(issues: [
+            .untrackedFiles(["Notes.md", "Scratch/ideas-about-the-new-thing.md"]),
+            .localOnlyBranches(["spike", "experiment/try-the-other-approach"]),
+            .requiredEnvironmentVariables(["API_HOST", "API_TOKEN"]),
+            .missingSetupInstructions
+        ])
         .padding(AppSpacing.regular)
         .frame(width: 420)
-}
-
-#Preview("Several issues with long explanations") {
-    IssueListView(issues: [
-        .untrackedFiles(["Notes.md", "Scratch/ideas-about-the-new-thing.md"]),
-        .localOnlyBranches(["spike", "experiment/try-the-other-approach"]),
-        .requiredEnvironmentVariables(["API_HOST", "API_TOKEN"]),
-        .missingSetupInstructions
-    ])
-    .padding(AppSpacing.regular)
-    .frame(width: 420)
-}
+    }
 #endif

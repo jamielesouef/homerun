@@ -47,7 +47,7 @@ struct TodayScreen: View {
         case .loading:
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        case .error(let error):
+        case let .error(error):
             EmptyStateView(
                 symbolName: "exclamationmark.icloud",
                 title: String(localized: "The shared workspace could not be read"),
@@ -59,7 +59,9 @@ struct TodayScreen: View {
             EmptyStateView(
                 symbolName: "folder.badge.plus",
                 title: String(localized: "Nothing tracked yet"),
-                message: String(localized: "Add a repository from the Repositories tab and homerun will keep an eye on it.")
+                message: String(
+                    localized: "Add a repository from the Repositories tab and homerun will keep an eye on it."
+                )
             )
         case .loaded:
             dashboard
@@ -154,27 +156,27 @@ struct TodayScreen: View {
 }
 
 #if DEBUG
-#Preview("Populated") {
-    TodayScreen()
-        .environment(\.repositoriesService, PreviewGraph.populated.repositories)
-        .environment(\.syncService, PreviewGraph.populated.sync)
-        .environment(\.resumeService, PreviewGraph.populated.resume)
-        .frame(width: 760, height: 620)
-}
+    #Preview("Populated") {
+        TodayScreen()
+            .environment(\.repositoriesService, PreviewGraph.populated.repositories)
+            .environment(\.syncService, PreviewGraph.populated.sync)
+            .environment(\.resumeService, PreviewGraph.populated.resume)
+            .frame(width: 760, height: 620)
+    }
 
-#Preview("Empty") {
-    TodayScreen()
-        .environment(\.repositoriesService, PreviewGraph.empty.repositories)
-        .environment(\.syncService, PreviewGraph.empty.sync)
-        .environment(\.resumeService, PreviewGraph.empty.resume)
-        .frame(width: 760, height: 620)
-}
+    #Preview("Empty") {
+        TodayScreen()
+            .environment(\.repositoriesService, PreviewGraph.empty.repositories)
+            .environment(\.syncService, PreviewGraph.empty.sync)
+            .environment(\.resumeService, PreviewGraph.empty.resume)
+            .frame(width: 760, height: 620)
+    }
 
-#Preview("Long names") {
-    TodayScreen()
-        .environment(\.repositoriesService, PreviewGraph.longNames.repositories)
-        .environment(\.syncService, PreviewGraph.longNames.sync)
-        .environment(\.resumeService, PreviewGraph.longNames.resume)
-        .frame(width: 760, height: 620)
-}
+    #Preview("Long names") {
+        TodayScreen()
+            .environment(\.repositoriesService, PreviewGraph.longNames.repositories)
+            .environment(\.syncService, PreviewGraph.longNames.sync)
+            .environment(\.resumeService, PreviewGraph.longNames.resume)
+            .frame(width: 760, height: 620)
+    }
 #endif

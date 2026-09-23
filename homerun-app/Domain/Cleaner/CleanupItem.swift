@@ -15,9 +15,9 @@ struct CleanupItem: Equatable, Identifiable, Hashable {
 
     var id: String {
         switch target {
-        case .simulatorRuntime(let identifier):
+        case let .simulatorRuntime(identifier):
             "runtime:\(identifier)"
-        case .derivedData(let url):
+        case let .derivedData(url):
             "derived:\(url.path(percentEncoded: false))"
         }
     }

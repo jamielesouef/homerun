@@ -14,10 +14,17 @@ struct GitHubAccountSettingsSection: View {
 
             Toggle(String(localized: "Check account access before syncing"), isOn: accessCheckBinding)
 
-            Text(String(localized: "These only apply to repositories that push over HTTPS. An SSH remote uses your SSH key, which switching accounts does not change."))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            Text(
+                String(
+                    localized: """
+                    These only apply to repositories that push over HTTPS. An SSH remote uses your SSH \
+                    key, which switching accounts does not change.
+                    """
+                )
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -39,13 +46,13 @@ struct GitHubAccountSettingsSection: View {
 }
 
 #if DEBUG
-#Preview("Account settings") {
-    Form {
-        GitHubAccountSettingsSection()
+    #Preview("Account settings") {
+        Form {
+            GitHubAccountSettingsSection()
+        }
+        .formStyle(.grouped)
+        .environment(\.settingsService, PreviewGraph.populated.settings)
+        .environment(\.accountsService, PreviewGraph.populated.accounts)
+        .frame(width: 560, height: 220)
     }
-    .formStyle(.grouped)
-    .environment(\.settingsService, PreviewGraph.populated.settings)
-    .environment(\.accountsService, PreviewGraph.populated.accounts)
-    .frame(width: 560, height: 220)
-}
 #endif

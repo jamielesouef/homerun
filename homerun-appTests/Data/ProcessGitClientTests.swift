@@ -18,10 +18,16 @@ struct ProcessGitClientTests {
         await runner.stub(["rev-parse", "HEAD"], output: "abc123\n")
         await runner.stub(["remote"], output: "origin\n")
         await runner.stub(["config", "--get", "remote.origin.url"], output: "git@github.com:acme/app.git\n")
-        await runner.stub(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], output: "origin/feature/login\n")
+        await runner.stub(
+            ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
+            output: "origin/feature/login\n"
+        )
         await runner.stub(["rev-list", "--left-right", "--count"], output: "0\t2\n")
         await runner.stub(["status"], output: " M App.swift\0?? Scratch.md\0")
-        await runner.stub(["for-each-ref"], output: "feature/login\u{1F}origin/feature/login\u{1F}[ahead 2]\nspike\u{1F}\u{1F}\n")
+        await runner.stub(
+            ["for-each-ref"],
+            output: "feature/login\u{1F}origin/feature/login\u{1F}[ahead 2]\nspike\u{1F}\u{1F}\n"
+        )
         await runner.stub(["submodule", "status"], output: "")
     }
 

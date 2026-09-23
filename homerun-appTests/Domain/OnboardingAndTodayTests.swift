@@ -10,15 +10,21 @@ struct OnboardingRequirementUseCaseTests {
         GitHubAccount(login: "jamie", host: "github.com", isActive: true)
     }
 
-    private func availability(git: Bool = true, gh: Bool = true, accounts: [GitHubAccount] = []) -> ToolAvailability {
-        ToolAvailability(isGitAvailable: git, isGitHubCLIAvailable: gh, gitHubAccounts: accounts)
+    private func availability(
+        git: Bool = true,
+        isGitHubCLIAvailable: Bool = true,
+        accounts: [GitHubAccount] = []
+    ) -> ToolAvailability {
+        ToolAvailability(isGitAvailable: git, isGitHubCLIAvailable: isGitHubCLIAvailable, gitHubAccounts: accounts)
     }
 
     // MARK: - Tests
 
     @Test("treats a missing git as the one thing that blocks the app")
     func treatsGitAsRequired() {
-        let requirements = OnboardingRequirementUseCase.requirements(for: availability(git: false, gh: false))
+        let requirements = OnboardingRequirementUseCase.requirements(
+            for: availability(git: false, isGitHubCLIAvailable: false)
+        )
 
         #expect(requirements.contains(.gitMissing))
         #expect(requirements.filter(\.isBlocking) == [.gitMissing])
@@ -26,7 +32,10 @@ struct OnboardingRequirementUseCaseTests {
 
     @Test("treats the GitHub CLI as optional")
     func treatsGitHubCLIAsOptional() {
-        #expect(OnboardingRequirementUseCase.requirements(for: availability(gh: false)) == [.gitHubCLIMissing])
+        #expect(
+            OnboardingRequirementUseCase.requirements(for: availability(isGitHubCLIAvailable: false)) ==
+                [.gitHubCLIMissing]
+        )
         #expect(OnboardingRequirement.gitHubCLIMissing.isBlocking == false)
     }
 
@@ -37,7 +46,7 @@ struct OnboardingRequirementUseCaseTests {
 
     @Test("keeps ordinary git sync available without gh")
     func keepsGitSyncWithoutCLI() {
-        let capabilities = OnboardingRequirementUseCase.capabilities(for: availability(gh: false))
+        let capabilities = OnboardingRequirementUseCase.capabilities(for: availability(isGitHubCLIAvailable: false))
 
         #expect(capabilities == [.gitSync])
     }
@@ -62,7 +71,7 @@ struct OnboardingRequirementUseCaseTests {
     @Test("skips onboarding again once it has been completed, even without gh")
     func skipsAfterCompletion() {
         let skips = OnboardingRequirementUseCase.canSkipOnboarding(
-            availability: availability(gh: false),
+            availability: availability(isGitHubCLIAvailable: false),
             hasCompletedOnboarding: true
         )
 
@@ -134,15 +143,22 @@ struct TodaySummaryUseCaseTests {
 
     @Test("reports the most recent successful sync across every repository")
     func reportsLastSync() {
-        #expect(TodaySummaryUseCase.summary(for: all, readiness: [:]).lastSuccessfulSync == Date(timeIntervalSince1970: 500))
+        #expect(TodaySummaryUseCase.summary(for: all, readiness: [:])
+            .lastSuccessfulSync == Date(timeIntervalSince1970: 500))
     }
 
     @Test("lists a project as ready to resume only when its readiness report says so")
     func listsReadyProjects() {
         let ready = ReadinessReport(identifier: "settled", currentBranchPushed: true, issues: [])
-        let notReady = ReadinessReport(identifier: "settled", currentBranchPushed: true, issues: [.missingSetupInstructions])
+        let notReady = ReadinessReport(
+            identifier: "settled",
+            currentBranchPushed: true,
+            issues: [.missingSetupInstructions]
+        )
 
-        #expect(TodaySummaryUseCase.summary(for: all, readiness: ["settled": ready]).readyToResume.map(\.name) == ["settled"])
+        #expect(TodaySummaryUseCase.summary(for: all, readiness: ["settled": ready])
+            .readyToResume
+            .map(\.name) == ["settled"])
         #expect(TodaySummaryUseCase.summary(for: all, readiness: ["settled": notReady]).readyToResume.isEmpty)
     }
 

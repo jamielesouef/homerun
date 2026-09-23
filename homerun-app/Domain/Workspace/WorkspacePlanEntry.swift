@@ -20,9 +20,9 @@ struct WorkspacePlanEntry: Equatable, Identifiable {
 
         var summary: String {
             switch self {
-            case .clone(let destination):
+            case let .clone(destination):
                 String(localized: "Clone into \(destination.path(percentEncoded: false))")
-            case .update(let destination):
+            case let .update(destination):
                 String(localized: "Already at \(destination.path(percentEncoded: false))")
             case .noWorkspaceRoot:
                 String(localized: "Set this Mac's workspace root before cloning")

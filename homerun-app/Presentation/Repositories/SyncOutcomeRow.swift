@@ -53,42 +53,42 @@ struct SyncOutcomeRow: View {
 
     private var detail: String {
         switch outcome.result {
-        case .succeeded(let commit, let branch):
+        case let .succeeded(commit, branch):
             String(localized: "Pushed \(branch ?? "the current branch") at \(commit?.prefix(7).description ?? "HEAD")")
-        case .skipped(let reason):
+        case let .skipped(reason):
             reason
-        case .failed(let failure):
+        case let .failed(failure):
             failure.message
         }
     }
 }
 
 #if DEBUG
-#Preview("Each result") {
-    VStack(alignment: .leading, spacing: AppSpacing.small) {
-        SyncOutcomeRow(
-            outcome: RepositorySyncOutcome(
-                identifier: "remote:github.com/acme/app",
-                result: .succeeded(commit: "abc1234def", branch: "feature/login"),
-                finishedAt: .now
+    #Preview("Each result") {
+        VStack(alignment: .leading, spacing: AppSpacing.small) {
+            SyncOutcomeRow(
+                outcome: RepositorySyncOutcome(
+                    identifier: "remote:github.com/acme/app",
+                    result: .succeeded(commit: "abc1234def", branch: "feature/login"),
+                    finishedAt: .now
+                )
             )
-        )
-        SyncOutcomeRow(
-            outcome: RepositorySyncOutcome(
-                identifier: "remote:github.com/acme/tooling",
-                result: .skipped("Already up to date"),
-                finishedAt: .now
+            SyncOutcomeRow(
+                outcome: RepositorySyncOutcome(
+                    identifier: "remote:github.com/acme/tooling",
+                    result: .skipped("Already up to date"),
+                    finishedAt: .now
+                )
             )
-        )
-        SyncOutcomeRow(
-            outcome: RepositorySyncOutcome(
-                identifier: "remote:github.com/acme/archive",
-                result: .failed(.authentication("remote: Authentication failed for the repository")),
-                finishedAt: .now
+            SyncOutcomeRow(
+                outcome: RepositorySyncOutcome(
+                    identifier: "remote:github.com/acme/archive",
+                    result: .failed(.authentication("remote: Authentication failed for the repository")),
+                    finishedAt: .now
+                )
             )
-        )
+        }
+        .padding()
+        .frame(width: 440)
     }
-    .padding()
-    .frame(width: 440)
-}
 #endif

@@ -30,9 +30,9 @@ struct SyncRunSheet: View {
         case .idle,
              .reviewing:
             ProgressView()
-        case .running(let progress):
+        case let .running(progress):
             running(progress)
-        case .finished(let summary):
+        case let .finished(summary):
             finished(summary)
         }
     }
@@ -99,8 +99,8 @@ struct SyncRunSheet: View {
 }
 
 #if DEBUG
-#Preview("Running") {
-    SyncRunSheet()
-        .environment(\.syncService, PreviewGraph.populated.sync)
-}
+    #Preview("Running") {
+        SyncRunSheet()
+            .environment(\.syncService, PreviewGraph.populated.sync)
+    }
 #endif

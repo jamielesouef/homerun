@@ -33,11 +33,20 @@ enum OnboardingRequirement: Equatable, Identifiable, CaseIterable {
     var explanation: String {
         switch self {
         case .gitMissing:
-            String(localized: "homerun needs the git command line tool. Install the Xcode command line tools, then check again.")
+            String(
+                localized: "homerun needs the git command line tool. Install the Xcode command line tools, then check again."
+            )
         case .gitHubCLIMissing:
-            String(localized: "gh is optional. Without it, homerun still syncs with your existing git authentication, but cannot manage GitHub accounts or retry a push with another one.")
+            String(
+                localized: """
+                gh is optional. Without it, homerun still syncs with your existing git authentication, \
+                but cannot manage GitHub accounts or retry a push with another one.
+                """
+            )
         case .gitHubCLINotAuthenticated:
-            String(localized: "gh is installed but signed out. Sign in to manage GitHub accounts and retry failed pushes with another account.")
+            String(
+                localized: "gh is installed but signed out. Sign in to manage GitHub accounts and retry failed pushes with another account."
+            )
         }
     }
 }

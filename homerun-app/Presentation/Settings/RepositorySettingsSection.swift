@@ -63,12 +63,12 @@ struct RepositorySettingsSection: View {
 }
 
 #if DEBUG
-#Preview("Repository settings") {
-    Form {
-        RepositorySettingsSection()
+    #Preview("Repository settings") {
+        Form {
+            RepositorySettingsSection()
+        }
+        .formStyle(.grouped)
+        .environment(\.settingsService, PreviewGraph.populated.settings)
+        .frame(width: 560, height: 280)
     }
-    .formStyle(.grouped)
-    .environment(\.settingsService, PreviewGraph.populated.settings)
-    .frame(width: 560, height: 280)
-}
 #endif

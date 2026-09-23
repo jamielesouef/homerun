@@ -38,25 +38,28 @@ struct EmptyStateView: View {
 }
 
 #if DEBUG
-#Preview("Message only") {
-    EmptyStateView(
-        symbolName: "folder",
-        title: String(localized: "No repositories yet"),
-        message: String(localized: "Add a folder to start tracking it.")
-    )
-    .frame(width: 520, height: 320)
-}
+    #Preview("Message only") {
+        EmptyStateView(
+            symbolName: "folder",
+            title: String(localized: "No repositories yet"),
+            message: String(localized: "Add a folder to start tracking it.")
+        )
+        .frame(width: 520, height: 320)
+    }
 
-#Preview("With an action and long text") {
-    EmptyStateView(
-        symbolName: "exclamationmark.triangle",
-        title: String(localized: "The shared workspace could not be read"),
-        message: String(
-            localized: "homerun could not reach the shared workspace on this Mac. Your repositories and their files are untouched; only the list homerun keeps is unavailable right now."
-        ),
-        actionTitle: String(localized: "Try again"),
-        action: {}
-    )
-    .frame(width: 520, height: 320)
-}
+    #Preview("With an action and long text") {
+        EmptyStateView(
+            symbolName: "exclamationmark.triangle",
+            title: String(localized: "The shared workspace could not be read"),
+            message: String(
+                localized: """
+                homerun could not reach the shared workspace on this Mac. Your repositories and their \
+                files are untouched; only the list homerun keeps is unavailable right now.
+                """
+            ),
+            actionTitle: String(localized: "Try again"),
+            action: {}
+        )
+        .frame(width: 520, height: 320)
+    }
 #endif

@@ -15,7 +15,7 @@ final class ResumeService {
     private(set) var phase: Phase = .idle
 
     var reviewPlan: ResumePlan? {
-        guard case .reviewing(let plan) = phase else {
+        guard case let .reviewing(plan) = phase else {
             return nil
         }
 
@@ -62,7 +62,7 @@ final class ResumeService {
     }
 
     func setSelection(_ isSelected: Bool, for identifier: String) {
-        guard case .reviewing(var plan) = phase else {
+        guard case var .reviewing(plan) = phase else {
             return
         }
 
@@ -79,7 +79,7 @@ final class ResumeService {
     }
 
     func run() async {
-        guard case .reviewing(let plan) = phase else {
+        guard case let .reviewing(plan) = phase else {
             return
         }
 
@@ -119,7 +119,7 @@ final class ResumeService {
             }
 
             phase = .running(SyncProgress(total: steps.count, completed: index, currentRepositoryName: step.name))
-            outcomes.append(await perform(step))
+            await outcomes.append(perform(step))
         }
 
         phase = .running(SyncProgress(total: steps.count, completed: steps.count, currentRepositoryName: nil))
@@ -129,12 +129,12 @@ final class ResumeService {
 
     private func perform(_ step: ResumeStep) async -> ResumeOutcome {
         switch step.action {
-        case .clone(let destination):
-            return await clone(step, to: destination)
+        case let .clone(destination):
+            await clone(step, to: destination)
         case .fastForward:
-            return await fastForward(step)
-        case .checkoutHandoffBranch(let branch):
-            return await checkout(step, branch: branch)
+            await fastForward(step)
+        case let .checkoutHandoffBranch(branch):
+            await checkout(step, branch: branch)
         case .upToDate,
              .blockedByLocalChanges,
              .blockedByDivergence,
@@ -142,7 +142,7 @@ final class ResumeService {
              .noWorkspaceRoot,
              .noRemote,
              .unreadable:
-            return ResumeOutcome(
+            ResumeOutcome(
                 identifier: step.identifier,
                 name: step.name,
                 openableURL: nil,
@@ -152,9 +152,8 @@ final class ResumeService {
     }
 
     private func clone(_ step: ResumeStep, to destination: URL) async -> ResumeOutcome {
-        guard
-            let repository = repositories.repository(identifier: step.identifier),
-            let remoteURL = repository.shared.remoteURL
+        guard let repository = repositories.repository(identifier: step.identifier),
+              let remoteURL = repository.shared.remoteURL
         else {
             return failure(step, message: SyncFailure.noRemote.message)
         }
@@ -168,19 +167,28 @@ final class ResumeService {
         settings.recordLocalPath(destination, for: step.identifier)
 
         guard let branch = step.handoff?.branch, await gitClient.branchExists(branch, at: destination) else {
-            return ResumeOutcome(identifier: step.identifier, name: step.name, openableURL: destination, failureMessage: nil)
+            return ResumeOutcome(
+                identifier: step.identifier,
+                name: step.name,
+                openableURL: destination,
+                failureMessage: nil
+            )
         }
 
         try? await gitClient.checkout(branch: branch, at: destination)
 
-        return ResumeOutcome(identifier: step.identifier, name: step.name, openableURL: destination, failureMessage: nil)
+        return ResumeOutcome(
+            identifier: step.identifier,
+            name: step.name,
+            openableURL: destination,
+            failureMessage: nil
+        )
     }
 
     private func fastForward(_ step: ResumeStep) async -> ResumeOutcome {
-        guard
-            let repository = repositories.repository(identifier: step.identifier),
-            let directory = repository.localPath,
-            let remote = repository.snapshot?.defaultRemoteName
+        guard let repository = repositories.repository(identifier: step.identifier),
+              let directory = repository.localPath,
+              let remote = repository.snapshot?.defaultRemoteName
         else {
             return failure(step, message: SyncFailure.notClonedLocally.message)
         }
@@ -196,9 +204,8 @@ final class ResumeService {
     }
 
     private func checkout(_ step: ResumeStep, branch: String) async -> ResumeOutcome {
-        guard
-            let repository = repositories.repository(identifier: step.identifier),
-            let directory = repository.localPath
+        guard let repository = repositories.repository(identifier: step.identifier),
+              let directory = repository.localPath
         else {
             return failure(step, message: SyncFailure.notClonedLocally.message)
         }

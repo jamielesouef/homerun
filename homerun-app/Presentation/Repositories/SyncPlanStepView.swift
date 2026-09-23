@@ -90,7 +90,9 @@ struct SyncPlanStepView: View {
     private var warnings: some View {
         if step.outstandingBranches.isEmpty == false {
             Label(
-                String(localized: "Other branches still unsynced: \(step.outstandingBranches.map(\.name).joined(separator: ", "))"),
+                String(
+                    localized: "Other branches still unsynced: \(step.outstandingBranches.map(\.name).joined(separator: ", "))"
+                ),
                 systemImage: "arrow.triangle.branch"
             )
             .font(.caption)
@@ -99,7 +101,9 @@ struct SyncPlanStepView: View {
 
         if step.submoduleChanges.isEmpty == false {
             Label(
-                String(localized: "Submodules need attention: \(step.submoduleChanges.map(\.path).joined(separator: ", "))"),
+                String(
+                    localized: "Submodules need attention: \(step.submoduleChanges.map(\.path).joined(separator: ", "))"
+                ),
                 systemImage: "shippingbox"
             )
             .font(.caption)
@@ -118,46 +122,46 @@ struct SyncPlanStepView: View {
 }
 
 #if DEBUG
-#Preview("Commit and push") {
-    SyncPlanStepView(
-        step: SyncPlanStep(
-            identifier: "a",
-            repositoryName: "app",
-            branch: "feature/login",
-            action: .commitAndPush(willCommit: true, setsUpstream: false),
-            trackedChanges: [
-                GitFileChange(path: "Sources/Login.swift", status: .modified),
-                GitFileChange(path: "Sources/Removed.swift", status: .deleted)
-            ],
-            selectableUntrackedPaths: ["Notes.md"],
-            includedUntrackedPaths: [],
-            outstandingBranches: [GitBranchRef(name: "spike", upstream: nil, aheadCount: 0, behindCount: 0)],
-            submoduleChanges: [GitSubmoduleChange(path: "Vendor/Lib", kind: .commitDiffers)]
-        ),
-        toggleUntracked: { _ in },
-        isSelected: { _ in false }
-    )
-    .padding()
-    .frame(width: 560)
-}
+    #Preview("Commit and push") {
+        SyncPlanStepView(
+            step: SyncPlanStep(
+                identifier: "a",
+                repositoryName: "app",
+                branch: "feature/login",
+                action: .commitAndPush(willCommit: true, setsUpstream: false),
+                trackedChanges: [
+                    GitFileChange(path: "Sources/Login.swift", status: .modified),
+                    GitFileChange(path: "Sources/Removed.swift", status: .deleted)
+                ],
+                selectableUntrackedPaths: ["Notes.md"],
+                includedUntrackedPaths: [],
+                outstandingBranches: [GitBranchRef(name: "spike", upstream: nil, aheadCount: 0, behindCount: 0)],
+                submoduleChanges: [GitSubmoduleChange(path: "Vendor/Lib", kind: .commitDiffers)]
+            ),
+            toggleUntracked: { _ in },
+            isSelected: { _ in false }
+        )
+        .padding()
+        .frame(width: 560)
+    }
 
-#Preview("Blocked") {
-    SyncPlanStepView(
-        step: SyncPlanStep(
-            identifier: "b",
-            repositoryName: "a-very-long-repository-name-that-needs-to-wrap-somewhere",
-            branch: "main",
-            action: .blocked(.branchNotAllowed("main")),
-            trackedChanges: [],
-            selectableUntrackedPaths: [],
-            includedUntrackedPaths: [],
-            outstandingBranches: [],
-            submoduleChanges: []
-        ),
-        toggleUntracked: { _ in },
-        isSelected: { _ in false }
-    )
-    .padding()
-    .frame(width: 560)
-}
+    #Preview("Blocked") {
+        SyncPlanStepView(
+            step: SyncPlanStep(
+                identifier: "b",
+                repositoryName: "a-very-long-repository-name-that-needs-to-wrap-somewhere",
+                branch: "main",
+                action: .blocked(.branchNotAllowed("main")),
+                trackedChanges: [],
+                selectableUntrackedPaths: [],
+                includedUntrackedPaths: [],
+                outstandingBranches: [],
+                submoduleChanges: []
+            ),
+            toggleUntracked: { _ in },
+            isSelected: { _ in false }
+        )
+        .padding()
+        .frame(width: 560)
+    }
 #endif

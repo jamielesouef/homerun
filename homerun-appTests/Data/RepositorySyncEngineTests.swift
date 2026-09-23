@@ -35,10 +35,10 @@ struct RepositorySyncEngineTests {
 
     private func makeEngine(
         git: StubGitClient = StubGitClient(),
-        gh: StubGitHubCLIClient = StubGitHubCLIClient(),
+        githubClient: StubGitHubCLIClient = StubGitHubCLIClient(),
         fallback: StubPushFallback = StubPushFallback()
     ) -> RepositorySyncEngine {
-        RepositorySyncEngine(gitClient: git, gitHubClient: gh, pushFallback: fallback)
+        RepositorySyncEngine(gitClient: git, gitHubClient: githubClient, pushFallback: fallback)
     }
 
     // MARK: - Commit and push
@@ -149,10 +149,10 @@ struct RepositorySyncEngineTests {
     @Test("stops before committing when the account cannot reach the repository")
     func stopsWhenAccessDenied() async {
         let git = StubGitClient()
-        let gh = StubGitHubCLIClient()
-        await gh.setAccounts([GitHubAccount(login: "jamie", host: "github.com", isActive: true)])
+        let githubClient = StubGitHubCLIClient()
+        await githubClient.setAccounts([GitHubAccount(login: "jamie", host: "github.com", isActive: true)])
 
-        let report = await makeEngine(git: git, gh: gh).sync(request(checksAccess: true))
+        let report = await makeEngine(git: git, githubClient: githubClient).sync(request(checksAccess: true))
 
         #expect(report.result == .failed(.accountAccessDenied("jamie")))
         #expect(await git.calls.isEmpty)
@@ -161,10 +161,10 @@ struct RepositorySyncEngineTests {
     @Test("syncs normally when the access check passes")
     func syncsWhenAccessGranted() async {
         let git = StubGitClient()
-        let gh = StubGitHubCLIClient()
-        await gh.setAccessibleRemotes(["https://github.com/acme/app.git"])
+        let githubClient = StubGitHubCLIClient()
+        await githubClient.setAccessibleRemotes(["https://github.com/acme/app.git"])
 
-        let report = await makeEngine(git: git, gh: gh).sync(request(checksAccess: true))
+        let report = await makeEngine(git: git, githubClient: githubClient).sync(request(checksAccess: true))
 
         #expect(report.result == .succeeded(commit: "head0001", branch: "feature/login"))
     }
@@ -172,11 +172,14 @@ struct RepositorySyncEngineTests {
     @Test("skips the access check for a remote the GitHub CLI does not authenticate")
     func skipsAccessCheckForSSH() async {
         let git = StubGitClient()
-        let gh = StubGitHubCLIClient()
+        let githubClient = StubGitHubCLIClient()
 
-        let report = await makeEngine(git: git, gh: gh).sync(request(remoteURL: "git@github.com:acme/app.git", checksAccess: true))
+        let report = await makeEngine(git: git, githubClient: githubClient).sync(request(
+            remoteURL: "git@github.com:acme/app.git",
+            checksAccess: true
+        ))
 
         #expect(report.result == .succeeded(commit: "head0001", branch: "feature/login"))
-        #expect(await gh.accessChecks.isEmpty)
+        #expect(await githubClient.accessChecks.isEmpty)
     }
 }

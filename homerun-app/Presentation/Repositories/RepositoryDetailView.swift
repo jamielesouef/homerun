@@ -169,9 +169,12 @@ struct RepositoryDetailView: View {
                 .font(.callout)
 
                 if report.isReadyToResume {
-                    Label(String(localized: "Nothing would stop this continuing on another Mac."), systemImage: "checkmark.seal")
-                        .font(.callout)
-                        .foregroundStyle(.green)
+                    Label(
+                        String(localized: "Nothing would stop this continuing on another Mac."),
+                        systemImage: "checkmark.seal"
+                    )
+                    .font(.callout)
+                    .foregroundStyle(.green)
                 } else {
                     IssueListView(issues: report.issues)
                 }
@@ -194,9 +197,11 @@ struct RepositoryDetailView: View {
                             .font(.callout)
                             .lineLimit(2)
 
-                        Text("\(commit.shortHash) · \(commit.authorName) · \(commit.date.formatted(date: .abbreviated, time: .shortened))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        Text(
+                            "\(commit.shortHash) · \(commit.authorName) · \(commit.date.formatted(date: .abbreviated, time: .shortened))"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -249,45 +254,45 @@ struct RepositoryDetailView: View {
 }
 
 #if DEBUG
-#Preview("Dirty repository") {
-    RepositoryDetailView(
-        repository: TrackedRepository(
-            shared: PreviewGraph.sampleRepositories[0],
-            localPath: URL(filePath: "/Users/preview/Developer/app"),
-            snapshot: PreviewGraph.snapshot(
-                branch: "feature/login",
-                ahead: 3,
-                tracked: [GitFileChange(path: "Sources/Login.swift", status: .modified)],
-                untracked: ["Notes.md"]
+    #Preview("Dirty repository") {
+        RepositoryDetailView(
+            repository: TrackedRepository(
+                shared: PreviewGraph.sampleRepositories[0],
+                localPath: URL(filePath: "/Users/preview/Developer/app"),
+                snapshot: PreviewGraph.snapshot(
+                    branch: "feature/login",
+                    ahead: 3,
+                    tracked: [GitFileChange(path: "Sources/Login.swift", status: .modified)],
+                    untracked: ["Notes.md"]
+                )
             )
         )
-    )
-    .environment(\.repositoriesService, PreviewGraph.populated.repositories)
-    .environment(\.accountsService, PreviewGraph.populated.accounts)
-    .frame(width: 620, height: 640)
-}
-
-#Preview("Not cloned") {
-    RepositoryDetailView(repository: TrackedRepository(shared: PreviewGraph.sampleRepositories[2]))
         .environment(\.repositoriesService, PreviewGraph.populated.repositories)
         .environment(\.accountsService, PreviewGraph.populated.accounts)
         .frame(width: 620, height: 640)
-}
+    }
 
-#Preview("Long names") {
-    RepositoryDetailView(
-        repository: TrackedRepository(
-            shared: WorkspaceRepository(
-                identifier: "x",
-                name: "an-extremely-long-repository-name-that-wraps-onto-several-lines",
-                remoteURL: "https://github.com/acme/an-extremely-long-repository-name-that-wraps.git"
-            ),
-            localPath: URL(filePath: "/Users/preview/Developer/clients/acme/a/deeply/nested/place"),
-            snapshot: PreviewGraph.snapshot(branch: "feature/a-very-long-branch-name-for-a-very-long-piece-of-work")
+    #Preview("Not cloned") {
+        RepositoryDetailView(repository: TrackedRepository(shared: PreviewGraph.sampleRepositories[2]))
+            .environment(\.repositoriesService, PreviewGraph.populated.repositories)
+            .environment(\.accountsService, PreviewGraph.populated.accounts)
+            .frame(width: 620, height: 640)
+    }
+
+    #Preview("Long names") {
+        RepositoryDetailView(
+            repository: TrackedRepository(
+                shared: WorkspaceRepository(
+                    identifier: "x",
+                    name: "an-extremely-long-repository-name-that-wraps-onto-several-lines",
+                    remoteURL: "https://github.com/acme/an-extremely-long-repository-name-that-wraps.git"
+                ),
+                localPath: URL(filePath: "/Users/preview/Developer/clients/acme/a/deeply/nested/place"),
+                snapshot: PreviewGraph.snapshot(branch: "feature/a-very-long-branch-name-for-a-very-long-piece-of-work")
+            )
         )
-    )
-    .environment(\.repositoriesService, PreviewGraph.longNames.repositories)
-    .environment(\.accountsService, PreviewGraph.longNames.accounts)
-    .frame(width: 620, height: 640)
-}
+        .environment(\.repositoriesService, PreviewGraph.longNames.repositories)
+        .environment(\.accountsService, PreviewGraph.longNames.accounts)
+        .frame(width: 620, height: 640)
+    }
 #endif

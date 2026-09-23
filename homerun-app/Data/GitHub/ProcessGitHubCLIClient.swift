@@ -94,7 +94,7 @@ struct ProcessGitHubCLIClient: GitHubCLIClienting {
             .notInstalled
         case .cancelled:
             .cancelled
-        case .launchFailed(let message):
+        case let .launchFailed(message):
             .commandFailed(message)
         case .outputUnreadable:
             .commandFailed("Unable to read command output")

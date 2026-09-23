@@ -16,13 +16,15 @@ struct GitReadinessChecker: @unchecked Sendable, ReadinessChecking {
     // MARK: - ReadinessChecking
 
     func evaluate(_ input: ReadinessCheckInput) async -> ReadinessReport {
-        ReadinessEvaluationUseCase.report(
+        await ReadinessEvaluationUseCase.report(
             identifier: input.repository.identifier,
             snapshot: input.snapshot,
             repository: input.repository,
-            unpushedTags: await unpushedTags(input),
-            missingConfigurationTemplates: missingTemplates(input),
-            hasSetupInstructions: hasSetupInstructions(input)
+            signals: ReadinessCheckSignals(
+                unpushedTags: unpushedTags(input),
+                missingConfigurationTemplates: missingTemplates(input),
+                hasSetupInstructions: hasSetupInstructions(input)
+            )
         )
     }
 
@@ -32,11 +34,9 @@ struct GitReadinessChecker: @unchecked Sendable, ReadinessChecking {
         guard input.checksRemoteTags, let remote = input.snapshot.defaultRemoteName else {
             return []
         }
-
-        guard
-            let local = try? await gitClient.localTags(at: input.directory),
-            local.isEmpty == false,
-            let remoteTags = try? await gitClient.remoteTags(remote: remote, at: input.directory)
+        guard let local = try? await gitClient.localTags(at: input.directory),
+              local.isEmpty == false,
+              let remoteTags = try? await gitClient.remoteTags(remote: remote, at: input.directory)
         else {
             return []
         }

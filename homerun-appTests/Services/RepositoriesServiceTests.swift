@@ -371,7 +371,7 @@ struct RepositoriesServiceTests {
 
     @Test("removes duplicate shared entries")
     @MainActor
-    func removesDuplicates() async {
+    func removesDuplicates() {
         let harness = ServiceHarness()
         harness.addUnclonedRepository("a", name: "app")
         harness.sharedStore.repositories.append(RepositoryFixtures.shared("a", name: "app"))
@@ -406,7 +406,11 @@ struct RepositoriesServiceTests {
         #expect(harness.sharedStore.repositories.isEmpty)
         #expect(harness.localStore.settings.repositoryPaths.isEmpty)
     }
+}
 
+// MARK: - Sync results and readiness
+
+extension RepositoriesServiceTests {
     // MARK: - Sync results
 
     @Test("records the branch and commit of a successful push for use when resuming elsewhere")
@@ -425,7 +429,11 @@ struct RepositoriesServiceTests {
         ])
 
         let stored = harness.sharedStore.repositories.first
-        #expect(stored?.handoff == RepositoryHandoff(branch: "feature/login", commit: "abc123", recordedAt: Date(timeIntervalSince1970: 500)))
+        #expect(stored?.handoff == RepositoryHandoff(
+            branch: "feature/login",
+            commit: "abc123",
+            recordedAt: Date(timeIntervalSince1970: 500)
+        ))
         #expect(stored?.lastSuccessfulSyncDate == Date(timeIntervalSince1970: 500))
     }
 

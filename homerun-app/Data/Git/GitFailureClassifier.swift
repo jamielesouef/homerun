@@ -33,7 +33,6 @@ enum GitFailureClassifier {
         guard isAuthenticationFailure(message) == false else {
             return .authenticationFailed(message)
         }
-
         guard isDivergenceFailure(message) == false else {
             return .diverged
         }

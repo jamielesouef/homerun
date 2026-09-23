@@ -35,7 +35,7 @@ struct RepositorySyncEngine: RepositorySyncPerforming {
             return await push(request, committed: true)
         case .nothingStaged:
             return await push(request, committed: false)
-        case .failed(let failure):
+        case let .failed(failure):
             return report(request, result: .failed(failure), committed: false)
         }
     }
@@ -52,11 +52,9 @@ struct RepositorySyncEngine: RepositorySyncPerforming {
         guard request.checksAccountAccess, let remoteURL = request.remoteURL else {
             return nil
         }
-
         guard AccountFallbackUseCase.appliesToRemote(remoteURL), await gitHubClient.isAvailable() else {
             return nil
         }
-
         guard await gitHubClient.hasAccess(toRemoteURL: remoteURL) == false else {
             return nil
         }
@@ -95,25 +93,33 @@ struct RepositorySyncEngine: RepositorySyncPerforming {
             return await handle(error, request: request, committed: committed)
         }
 
-        return report(request, result: .succeeded(commit: await headCommit(request), branch: request.branch), committed: committed)
+        return await report(
+            request,
+            result: .succeeded(commit: headCommit(request), branch: request.branch),
+            committed: committed
+        )
     }
 
-    private func handle(_ error: GitError, request: RepositorySyncRequest, committed: Bool) async -> RepositorySyncReport {
+    private func handle(
+        _ error: GitError,
+        request: RepositorySyncRequest,
+        committed: Bool
+    ) async -> RepositorySyncReport {
         switch error {
-        case .authenticationFailed(let detail):
-            return await retryWithFallback(request, committed: committed, detail: detail)
+        case let .authenticationFailed(detail):
+            await retryWithFallback(request, committed: committed, detail: detail)
         case .diverged:
-            return report(request, result: .failed(.diverged), committed: committed)
+            report(request, result: .failed(.diverged), committed: committed)
         case .noRemoteConfigured:
-            return report(request, result: .failed(.noRemote), committed: committed)
+            report(request, result: .failed(.noRemote), committed: committed)
         case .noUpstreamConfigured:
-            return report(request, result: .failed(.noUpstream), committed: committed)
+            report(request, result: .failed(.noUpstream), committed: committed)
         case .gitUnavailable,
              .notARepository,
              .commandFailed,
              .nothingToCommit,
              .cancelled:
-            return report(request, result: .failed(.git(String(describing: error))), committed: committed)
+            report(request, result: .failed(.git(String(describing: error))), committed: committed)
         }
     }
 
@@ -137,11 +143,11 @@ struct RepositorySyncEngine: RepositorySyncPerforming {
         let fallback = await pushFallback.retryPush(context)
 
         switch fallback {
-        case .succeeded(let account, _):
+        case let .succeeded(account, _):
             AppLog.info("Pushed \(request.identifier) using the GitHub account \(account)")
-            return report(
+            return await report(
                 request,
-                result: .succeeded(commit: await headCommit(request), branch: request.branch),
+                result: .succeeded(commit: headCommit(request), branch: request.branch),
                 committed: committed,
                 fallback: fallback
             )

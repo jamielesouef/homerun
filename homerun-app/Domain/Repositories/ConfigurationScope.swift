@@ -20,9 +20,13 @@ enum ConfigurationScope: String, Equatable, CaseIterable, Identifiable {
     var explanation: String {
         switch self {
         case .local:
-            String(localized: "Clears the paths and checkout details homerun keeps for this Mac. The shared workspace and your files are untouched.")
+            String(
+                localized: "Clears the paths and checkout details homerun keeps for this Mac. The shared workspace and your files are untouched."
+            )
         case .shared:
-            String(localized: "Removes every repository from the shared workspace on all your Macs. No files are deleted.")
+            String(
+                localized: "Removes every repository from the shared workspace on all your Macs. No files are deleted."
+            )
         }
     }
 }

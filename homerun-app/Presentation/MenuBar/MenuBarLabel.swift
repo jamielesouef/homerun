@@ -31,17 +31,17 @@ struct MenuBarLabel: View {
 }
 
 #if DEBUG
-#Preview("With a count") {
-    MenuBarLabel()
-        .environment(\.repositoriesService, PreviewGraph.populated.repositories)
-        .environment(\.settingsService, PreviewGraph.populated.settings)
-        .padding()
-}
+    #Preview("With a count") {
+        MenuBarLabel()
+            .environment(\.repositoriesService, PreviewGraph.populated.repositories)
+            .environment(\.settingsService, PreviewGraph.populated.settings)
+            .padding()
+    }
 
-#Preview("All clear") {
-    MenuBarLabel()
-        .environment(\.repositoriesService, PreviewGraph.empty.repositories)
-        .environment(\.settingsService, PreviewGraph.empty.settings)
-        .padding()
-}
+    #Preview("All clear") {
+        MenuBarLabel()
+            .environment(\.repositoriesService, PreviewGraph.empty.repositories)
+            .environment(\.settingsService, PreviewGraph.empty.settings)
+            .padding()
+    }
 #endif

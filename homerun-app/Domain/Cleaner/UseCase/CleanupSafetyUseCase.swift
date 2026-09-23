@@ -16,11 +16,9 @@ enum CleanupSafetyUseCase {
         guard lowercased.hasSuffix("/") == false || lowercased.count > 1 else {
             return false
         }
-
         guard lowercased != "/", lowercased.isEmpty == false else {
             return false
         }
-
         guard lowercased.contains(".app/contents/developer") == false else {
             return false
         }
@@ -36,7 +34,6 @@ enum CleanupSafetyUseCase {
         guard runtime.isDeletable else {
             return false
         }
-
         guard let path = runtime.path else {
             return true
         }

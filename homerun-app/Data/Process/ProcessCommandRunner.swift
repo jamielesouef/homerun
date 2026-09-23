@@ -20,7 +20,6 @@ struct ProcessCommandRunner: CommandRunning {
         guard Task.isCancelled == false else {
             throw .cancelled
         }
-
         guard FileManager.default.isExecutableFile(atPath: request.executablePath) else {
             throw .executableMissing(request.executablePath)
         }
@@ -46,9 +45,8 @@ struct ProcessCommandRunner: CommandRunning {
         process.currentDirectoryURL = request.workingDirectory
         process.environment = baseEnvironment.merging(request.extraEnvironment) { _, new in new }
 
-        guard
-            let outputHandle = try? FileHandle(forWritingTo: outputURL),
-            let errorHandle = try? FileHandle(forWritingTo: errorURL)
+        guard let outputHandle = try? FileHandle(forWritingTo: outputURL),
+              let errorHandle = try? FileHandle(forWritingTo: errorURL)
         else {
             throw CommandError.outputUnreadable
         }

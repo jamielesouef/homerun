@@ -13,10 +13,14 @@ struct ReadinessSettingsSection: View {
 
     var body: some View {
         Section(String(localized: "Readiness checks")) {
-            Text(String(localized: "These travel in the manifest so another Mac knows what a project needs. Values are never copied, only names."))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            Text(
+                String(
+                    localized: "These travel in the manifest so another Mac knows what a project needs. Values are never copied, only names."
+                )
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
 
             Picker(String(localized: "Repository"), selection: $selection) {
                 Text(String(localized: "Choose a repository")).tag(String?.none)
@@ -34,22 +38,21 @@ struct ReadinessSettingsSection: View {
 
     // MARK: - Editor
 
+    @ViewBuilder
     private func editor(for repository: TrackedRepository) -> some View {
-        Group {
-            LabeledContent(String(localized: "Setup instructions")) {
-                TextField("README.md", text: optionalBinding(repository, \.setupInstructionsPath))
-                    .textFieldStyle(.roundedBorder)
-            }
+        LabeledContent(String(localized: "Setup instructions")) {
+            TextField("README.md", text: optionalBinding(repository, \.setupInstructionsPath))
+                .textFieldStyle(.roundedBorder)
+        }
 
-            LabeledContent(String(localized: "Required environment variables")) {
-                TextField("API_HOST, API_TOKEN", text: listBinding(repository, \.requiredEnvironmentVariableNames))
-                    .textFieldStyle(.roundedBorder)
-            }
+        LabeledContent(String(localized: "Required environment variables")) {
+            TextField("API_HOST, API_TOKEN", text: listBinding(repository, \.requiredEnvironmentVariableNames))
+                .textFieldStyle(.roundedBorder)
+        }
 
-            LabeledContent(String(localized: "Expected configuration templates")) {
-                TextField(".env.example", text: listBinding(repository, \.expectedConfigurationTemplates))
-                    .textFieldStyle(.roundedBorder)
-            }
+        LabeledContent(String(localized: "Expected configuration templates")) {
+            TextField(".env.example", text: listBinding(repository, \.expectedConfigurationTemplates))
+                .textFieldStyle(.roundedBorder)
         }
     }
 
@@ -88,12 +91,12 @@ struct ReadinessSettingsSection: View {
 }
 
 #if DEBUG
-#Preview("Readiness settings") {
-    Form {
-        ReadinessSettingsSection()
+    #Preview("Readiness settings") {
+        Form {
+            ReadinessSettingsSection()
+        }
+        .formStyle(.grouped)
+        .environment(\.repositoriesService, PreviewGraph.populated.repositories)
+        .frame(width: 620, height: 320)
     }
-    .formStyle(.grouped)
-    .environment(\.repositoriesService, PreviewGraph.populated.repositories)
-    .frame(width: 620, height: 320)
-}
 #endif

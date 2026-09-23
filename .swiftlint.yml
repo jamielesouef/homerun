@@ -1,0 +1,142 @@
+# Case-sensitive paths to include during linting. Directory paths supplied on the
+# command line will be ignored.
+# SwiftFormat owns formatting; SwiftLint owns correctness, metrics and custom rules.
+#
+# The two tools were both enforcing whitespace, spacing, brace placement and
+# redundancy, which is how `wrapMultilineStatementBraces` ended up disabled in
+# `.swiftformat` — SwiftLint's `opening_brace` disagreed with it. Every rule in the
+# second group below has a direct SwiftFormat counterpart, so SwiftLint stands down
+# and `.swiftformat` is the single source of truth for how code is laid out.
+#
+# Keep enforcing here: identifier/type naming, force unwraps and casts, the metrics
+# limits, the `use_of_print` custom rule, and everything SwiftFormat has no opinion on.
+disabled_rules: # rule identifiers turned on by default to exclude from running
+  - non_optional_string_data_conversion
+
+  # `allowsMasterBranchSync` and friends name a real git branch that is
+  # literally called "master" (the pre-2020 default branch name). The code
+  # has to check for that exact string, so there is no rewording that keeps
+  # the meaning without the word.
+  - inclusive_language
+
+  # Whitespace and line breaks — SwiftFormat: --trim-whitespace, --linebreaks,
+  # blankLines*, linebreakAtEndOfFile
+  - leading_whitespace
+  - trailing_whitespace
+  - trailing_newline
+  - vertical_whitespace
+
+  # Spacing — SwiftFormat: spaceAroundParens, spaceAroundOperators, spaceInsideParens
+  - colon
+  - comma
+  - attribute_name_spacing
+  - function_name_whitespace
+  - no_space_in_method_call
+  - return_arrow_whitespace
+
+  # Braces, statement position and indentation — SwiftFormat: braces, elseOnSameLine,
+  # --indent-case, --wrap-arguments.
+  #
+  # `opening_brace` stays ENABLED on purpose: the opening brace belongs on the same
+  # line as the condition, and it is the rule that enforces that. SwiftFormat's
+  # `wrapMultilineStatementBraces` is disabled to match — see `.swiftformat`.
+  - closing_brace
+  - statement_position
+  - switch_case_alignment
+  - vertical_parameter_alignment
+
+  # Redundancy — SwiftFormat: redundantParens, redundantPattern, redundantGet,
+  # redundantNilInit, redundantLet, redundantBreak, void, --semicolons, --trailing-commas
+  - control_statement
+  - empty_enum_arguments
+  - empty_parameters
+  - empty_parentheses_with_trailing_closure
+  - implicit_getter
+  - implicit_optional_initialization
+  - redundant_discardable_let
+  - redundant_void_return
+  - trailing_comma
+  - trailing_semicolon
+  - unneeded_break_in_switch
+  - void_return
+
+  # Imports — SwiftFormat: duplicateImports, --import-grouping
+  - duplicate_imports
+
+excluded: # case-sensitive paths to ignore during linting. Takes precedence over `included`
+  # The models moved into the ChagiLegacy package (NAT-2631); the exclusion follows them so the
+  # coverage this invocation had before the move is preserved exactly.
+  - ChagiLegacy
+  - TypesenseClient
+  - Utilities
+  - ViewModels
+  - build
+  - Tools
+  - APIClient
+  - Configuration
+  - Scripts
+  - Domain/KickClient/MockKickClient.swift
+  - KickUITests
+  - KickTV/Configuration
+
+line_length: 150
+
+type_body_length:
+    - 350 # warning
+    - 400 # error
+
+# or they can set both explicitly
+file_length:
+    warning: 500
+    error: 1200
+
+type_name:
+    min_length: 4 # only warning
+    # Raised from 40/50. The realtime coordinator types are legitimately long
+    # (`DisabledPersistentRealtimeConnectionCoordinator` is 47) and shortening them
+    # costs more in clarity than the rule buys.
+    max_length: # warning and error
+        warning: 50
+        error: 60
+    allowed_symbols: ["_"]
+
+large_tuple:
+    - 3
+    - 5
+
+nesting:
+    type_level:
+        - 2
+        - 3
+    function_level:
+        - 2
+        - 3
+
+warning_threshold: 5000
+
+custom_rules:
+    use_of_print:
+        name: "Use of print"
+        excluded: "Console.swift"
+        regex: '^[ \t]*print\('
+        message: "Avoid use of print() Use Console.log() instead"
+        severity: error
+
+    # A leading `!` is easy to miss when skimming, and easier still to lose in a
+    # diff. `foo == false` reads the same at a glance as `foo == true`.
+    # Force unwraps, `!=`, `try!` and `as!` are unaffected — the lookbehind only
+    # matches a `!` that starts an expression.
+    # The two leading lookbehinds exempt `#if !DEBUG` / `#elseif !FOO`: a compilation
+    # condition takes `!`, `&&` and `||` only, so `#if DEBUG == false` does not compile.
+    # `match_kinds` keeps the rule out of comments and string literals.
+    no_prefix_negation:
+        name: "Prefix negation"
+        regex: '(?<!#if[ \t]{0,8})(?<!#elseif[ \t]{0,8})(?<![A-Za-z0-9_)\]"!=<>?])!(?=[A-Za-z_(])'
+        message: "Write `foo == false` rather than `!foo` — a leading ! is easy to miss"
+        severity: error
+        match_kinds:
+            - argument
+            - identifier
+            - keyword
+            - parameter
+            - typeidentifier

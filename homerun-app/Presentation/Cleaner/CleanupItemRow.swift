@@ -53,33 +53,34 @@ struct CleanupItemRow: View {
 }
 
 #if DEBUG
-#Preview("Removable and protected") {
-    List {
-        CleanupItemRow(
-            item: CleanupItem(
-                title: "iOS 18.0 (22A3351)",
-                detail: "/Library/Developer/CoreSimulator/Images/R1.dmg",
-                sizeBytes: 7_100_000_000,
-                category: .simulatorRuntimes,
-                target: .simulatorRuntime("R1"),
-                isDeletable: true
-            ),
-            isSelected: true,
-            toggle: {}
-        )
-        CleanupItemRow(
-            item: CleanupItem(
-                title: "iOS 17.5 bundled with Xcode",
-                detail: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Library/Developer/CoreSimulator/Profiles/Runtimes",
-                sizeBytes: 5_000_000_000,
-                category: .simulatorRuntimes,
-                target: .simulatorRuntime("R2"),
-                isDeletable: false
-            ),
-            isSelected: false,
-            toggle: {}
-        )
+    #Preview("Removable and protected") {
+        List {
+            CleanupItemRow(
+                item: CleanupItem(
+                    title: "iOS 18.0 (22A3351)",
+                    detail: "/Library/Developer/CoreSimulator/Images/R1.dmg",
+                    sizeBytes: 7_100_000_000,
+                    category: .simulatorRuntimes,
+                    target: .simulatorRuntime("R1"),
+                    isDeletable: true
+                ),
+                isSelected: true,
+                toggle: {}
+            )
+            CleanupItemRow(
+                item: CleanupItem(
+                    title: "iOS 17.5 bundled with Xcode",
+                    detail: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Library/" +
+                        "Developer/CoreSimulator/Profiles/Runtimes",
+                    sizeBytes: 5_000_000_000,
+                    category: .simulatorRuntimes,
+                    target: .simulatorRuntime("R2"),
+                    isDeletable: false
+                ),
+                isSelected: false,
+                toggle: {}
+            )
+        }
+        .frame(width: 620, height: 200)
     }
-    .frame(width: 620, height: 200)
-}
 #endif

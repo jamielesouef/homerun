@@ -54,20 +54,24 @@ struct PortableWorkspaceSettingsSection: View {
         case .loading:
             ProgressView()
                 .controlSize(.small)
-        case .error(let error):
+        case let .error(error):
             Label(error.message, systemImage: "exclamationmark.triangle")
                 .font(.caption)
                 .foregroundStyle(.red)
                 .fixedSize(horizontal: false, vertical: true)
-        case .loaded(let manifest, let plan):
+        case let .loaded(manifest, plan):
             loadedPreview(manifest, plan: plan)
         }
     }
 
     private func loadedPreview(_ manifest: WorkspaceManifest, plan: WorkspacePlan) -> some View {
         VStack(alignment: .leading, spacing: AppSpacing.xsmall) {
-            Text(String(localized: "\(manifest.name), version \(manifest.version): \(plan.cloneCount) to clone, \(plan.updateCount) already here."))
-                .font(.caption)
+            Text(
+                String(
+                    localized: "\(manifest.name), version \(manifest.version): \(plan.cloneCount) to clone, \(plan.updateCount) already here."
+                )
+            )
+            .font(.caption)
 
             ForEach(plan.entries) { entry in
                 Text("\(entry.name) — \(entry.action.summary)")
@@ -160,25 +164,25 @@ struct PortableWorkspaceSettingsSection: View {
 }
 
 #if DEBUG
-#Preview("Portable workspace") {
-    Form {
-        PortableWorkspaceSettingsSection()
+    #Preview("Portable workspace") {
+        Form {
+            PortableWorkspaceSettingsSection()
+        }
+        .formStyle(.grouped)
+        .environment(\.settingsService, PreviewGraph.populated.settings)
+        .environment(\.workspaceService, PreviewGraph.populated.workspace)
+        .environment(\.repositoriesService, PreviewGraph.populated.repositories)
+        .frame(width: 620, height: 480)
     }
-    .formStyle(.grouped)
-    .environment(\.settingsService, PreviewGraph.populated.settings)
-    .environment(\.workspaceService, PreviewGraph.populated.workspace)
-    .environment(\.repositoriesService, PreviewGraph.populated.repositories)
-    .frame(width: 620, height: 480)
-}
 
-#Preview("Nothing configured") {
-    Form {
-        PortableWorkspaceSettingsSection()
+    #Preview("Nothing configured") {
+        Form {
+            PortableWorkspaceSettingsSection()
+        }
+        .formStyle(.grouped)
+        .environment(\.settingsService, PreviewGraph.empty.settings)
+        .environment(\.workspaceService, PreviewGraph.empty.workspace)
+        .environment(\.repositoriesService, PreviewGraph.empty.repositories)
+        .frame(width: 620, height: 480)
     }
-    .formStyle(.grouped)
-    .environment(\.settingsService, PreviewGraph.empty.settings)
-    .environment(\.workspaceService, PreviewGraph.empty.workspace)
-    .environment(\.repositoriesService, PreviewGraph.empty.repositories)
-    .frame(width: 620, height: 480)
-}
 #endif

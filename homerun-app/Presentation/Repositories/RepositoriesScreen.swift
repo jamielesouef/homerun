@@ -126,7 +126,7 @@ struct RepositoriesScreen: View {
         case .loading:
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        case .error(let error):
+        case let .error(error):
             EmptyStateView(
                 symbolName: "exclamationmark.icloud",
                 title: String(localized: "The shared workspace could not be read"),
@@ -317,27 +317,27 @@ struct RepositoriesScreen: View {
 }
 
 #if DEBUG
-#Preview("Populated") {
-    RepositoriesScreen()
-        .environment(\.repositoriesService, PreviewGraph.populated.repositories)
-        .environment(\.syncService, PreviewGraph.populated.sync)
-        .environment(\.accountsService, PreviewGraph.populated.accounts)
-        .frame(width: 960, height: 620)
-}
+    #Preview("Populated") {
+        RepositoriesScreen()
+            .environment(\.repositoriesService, PreviewGraph.populated.repositories)
+            .environment(\.syncService, PreviewGraph.populated.sync)
+            .environment(\.accountsService, PreviewGraph.populated.accounts)
+            .frame(width: 960, height: 620)
+    }
 
-#Preview("Empty") {
-    RepositoriesScreen()
-        .environment(\.repositoriesService, PreviewGraph.empty.repositories)
-        .environment(\.syncService, PreviewGraph.empty.sync)
-        .environment(\.accountsService, PreviewGraph.empty.accounts)
-        .frame(width: 960, height: 620)
-}
+    #Preview("Empty") {
+        RepositoriesScreen()
+            .environment(\.repositoriesService, PreviewGraph.empty.repositories)
+            .environment(\.syncService, PreviewGraph.empty.sync)
+            .environment(\.accountsService, PreviewGraph.empty.accounts)
+            .frame(width: 960, height: 620)
+    }
 
-#Preview("Long names") {
-    RepositoriesScreen()
-        .environment(\.repositoriesService, PreviewGraph.longNames.repositories)
-        .environment(\.syncService, PreviewGraph.longNames.sync)
-        .environment(\.accountsService, PreviewGraph.longNames.accounts)
-        .frame(width: 960, height: 620)
-}
+    #Preview("Long names") {
+        RepositoriesScreen()
+            .environment(\.repositoriesService, PreviewGraph.longNames.repositories)
+            .environment(\.syncService, PreviewGraph.longNames.sync)
+            .environment(\.accountsService, PreviewGraph.longNames.accounts)
+            .frame(width: 960, height: 620)
+    }
 #endif

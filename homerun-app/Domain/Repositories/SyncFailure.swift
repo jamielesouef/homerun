@@ -13,7 +13,7 @@ enum SyncFailure: Error, Equatable {
 
     var message: String {
         switch self {
-        case .authentication(let detail):
+        case let .authentication(detail):
             String(localized: "Authentication failed: \(detail)")
         case .diverged:
             String(localized: "The branch has diverged from its remote. Resolve it by hand.")
@@ -21,15 +21,15 @@ enum SyncFailure: Error, Equatable {
             String(localized: "No push destination is configured.")
         case .noUpstream:
             String(localized: "The branch has no upstream yet.")
-        case .branchNotAllowed(let branch):
+        case let .branchNotAllowed(branch):
             String(localized: "Syncing \(branch) is turned off for this repository.")
         case .detachedHead:
             String(localized: "HEAD is detached, so there is no branch to push.")
         case .notClonedLocally:
             String(localized: "This repository is not cloned on this Mac.")
-        case .accountAccessDenied(let account):
+        case let .accountAccessDenied(account):
             String(localized: "The account \(account) cannot reach this repository.")
-        case .git(let detail):
+        case let .git(detail):
             detail
         }
     }

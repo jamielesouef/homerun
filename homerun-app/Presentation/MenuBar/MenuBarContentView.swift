@@ -117,17 +117,17 @@ struct MenuBarContentView: View {
 }
 
 #if DEBUG
-#Preview("Work outstanding") {
-    MenuBarContentView()
-        .environment(\.repositoriesService, PreviewGraph.populated.repositories)
-        .environment(\.syncService, PreviewGraph.populated.sync)
-        .environment(\.resumeService, PreviewGraph.populated.resume)
-}
+    #Preview("Work outstanding") {
+        MenuBarContentView()
+            .environment(\.repositoriesService, PreviewGraph.populated.repositories)
+            .environment(\.syncService, PreviewGraph.populated.sync)
+            .environment(\.resumeService, PreviewGraph.populated.resume)
+    }
 
-#Preview("Nothing tracked") {
-    MenuBarContentView()
-        .environment(\.repositoriesService, PreviewGraph.empty.repositories)
-        .environment(\.syncService, PreviewGraph.empty.sync)
-        .environment(\.resumeService, PreviewGraph.empty.resume)
-}
+    #Preview("Nothing tracked") {
+        MenuBarContentView()
+            .environment(\.repositoriesService, PreviewGraph.empty.repositories)
+            .environment(\.syncService, PreviewGraph.empty.sync)
+            .environment(\.resumeService, PreviewGraph.empty.resume)
+    }
 #endif

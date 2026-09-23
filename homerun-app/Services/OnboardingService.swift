@@ -94,7 +94,7 @@ final class OnboardingService: SingleFlightRefreshing {
 
         let isGitAvailable = await gitClient.isAvailable()
         let isGitHubCLIAvailable = await gitHubClient.isAvailable()
-        let accounts = isGitHubCLIAvailable ? (try? await gitHubClient.accounts()) ?? [] : []
+        let accounts = await isGitHubCLIAvailable ? (try? gitHubClient.accounts()) ?? [] : []
 
         guard Task.isCancelled == false else {
             return

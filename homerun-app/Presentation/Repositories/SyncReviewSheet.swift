@@ -99,15 +99,15 @@ struct SyncReviewSheet: View {
 }
 
 #if DEBUG
-#Preview("Review") {
-    SyncReviewSheet()
-        .environment(\.syncService, PreviewGraph.populated.sync)
-        .environment(\.settingsService, PreviewGraph.populated.settings)
-}
+    #Preview("Review") {
+        SyncReviewSheet()
+            .environment(\.syncService, PreviewGraph.populated.sync)
+            .environment(\.settingsService, PreviewGraph.populated.settings)
+    }
 
-#Preview("Nothing to do") {
-    SyncReviewSheet()
-        .environment(\.syncService, PreviewGraph.empty.sync)
-        .environment(\.settingsService, PreviewGraph.empty.settings)
-}
+    #Preview("Nothing to do") {
+        SyncReviewSheet()
+            .environment(\.syncService, PreviewGraph.empty.sync)
+            .environment(\.settingsService, PreviewGraph.empty.settings)
+    }
 #endif

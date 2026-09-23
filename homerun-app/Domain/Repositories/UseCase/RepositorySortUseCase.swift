@@ -4,11 +4,11 @@ enum RepositorySortUseCase {
     static func sorted(_ repositories: [TrackedRepository], by order: RepositorySortOrder) -> [TrackedRepository] {
         switch order {
         case .name:
-            return repositories.sorted { lexicographicallyPrecedes($0.name, $1.name) }
+            repositories.sorted { lexicographicallyPrecedes($0.name, $1.name) }
         case .path:
-            return repositories.sorted { lexicographicallyPrecedes(path(of: $0), path(of: $1)) }
+            repositories.sorted { lexicographicallyPrecedes(path(of: $0), path(of: $1)) }
         case .status:
-            return repositories.sorted { first, second in
+            repositories.sorted { first, second in
                 guard first.status == second.status else {
                     return rank(first.status) < rank(second.status)
                 }
@@ -16,7 +16,7 @@ enum RepositorySortUseCase {
                 return lexicographicallyPrecedes(first.name, second.name)
             }
         case .lastSynced:
-            return repositories.sorted { first, second in
+            repositories.sorted { first, second in
                 let firstDate = first.shared.lastSuccessfulSyncDate ?? .distantPast
                 let secondDate = second.shared.lastSuccessfulSyncDate ?? .distantPast
 

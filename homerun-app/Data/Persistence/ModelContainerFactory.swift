@@ -8,15 +8,14 @@ enum ModelContainerFactory {
         inMemory: Bool,
         cloudKitContainerIdentifier: String?
     ) throws(PersistenceError) -> ModelContainer {
-        let cloudKitDatabase: ModelConfiguration.CloudKitDatabase
-
-        switch cloudKitContainerIdentifier {
-        case let identifier? where inMemory == false:
-            cloudKitDatabase = .private(identifier)
-        case .some,
-             .none:
-            cloudKitDatabase = .none
-        }
+        let cloudKitDatabase: ModelConfiguration.CloudKitDatabase =
+            switch cloudKitContainerIdentifier {
+            case let identifier? where inMemory == false:
+                .private(identifier)
+            case .some,
+                 .none:
+                .none
+            }
 
         let configuration = ModelConfiguration(
             schema: schema,
@@ -33,7 +32,10 @@ enum ModelContainerFactory {
 
     // MARK: - Helpers
 
-    private static func makeLocalFallback(inMemory: Bool, underlying: any Error) throws(PersistenceError) -> ModelContainer {
+    private static func makeLocalFallback(
+        inMemory: Bool,
+        underlying: any Error
+    ) throws(PersistenceError) -> ModelContainer {
         AppLog.error("Falling back to a local store: \(underlying.localizedDescription)")
 
         let configuration = ModelConfiguration(

@@ -67,18 +67,20 @@ struct DiscoveredRepositoriesSheet: View {
 }
 
 #if DEBUG
-#Preview("Several found") {
-    DiscoveredRepositoriesSheet(
-        discovered: [
-            DiscoveredRepository(url: URL(filePath: "/Users/preview/Developer/app")),
-            DiscoveredRepository(url: URL(filePath: "/Users/preview/Developer/clients/acme/a-long-nested-repository-name"))
-        ],
-        add: { _ in },
-        cancel: {}
-    )
-}
+    #Preview("Several found") {
+        DiscoveredRepositoriesSheet(
+            discovered: [
+                DiscoveredRepository(url: URL(filePath: "/Users/preview/Developer/app")),
+                DiscoveredRepository(
+                    url: URL(filePath: "/Users/preview/Developer/clients/acme/a-long-nested-repository-name")
+                )
+            ],
+            add: { _ in },
+            cancel: {}
+        )
+    }
 
-#Preview("None found") {
-    DiscoveredRepositoriesSheet(discovered: [], add: { _ in }, cancel: {})
-}
+    #Preview("None found") {
+        DiscoveredRepositoriesSheet(discovered: [], add: { _ in }, cancel: {})
+    }
 #endif

@@ -10,7 +10,11 @@ struct SyncServiceTests {
     @MainActor
     func showsPlanForConfirmation() async {
         let harness = ServiceHarness()
-        await harness.addRepository("a", name: "app", snapshot: RepositoryFixtures.snapshot(branch: "feature/login", ahead: 1))
+        await harness.addRepository(
+            "a",
+            name: "app",
+            snapshot: RepositoryFixtures.snapshot(branch: "feature/login", ahead: 1)
+        )
         await harness.repositories.start()
         let service = harness.makeSync()
 
@@ -24,7 +28,11 @@ struct SyncServiceTests {
     @MainActor
     func skipsConfirmationWhenDisabled() async {
         let harness = ServiceHarness()
-        await harness.addRepository("a", name: "app", snapshot: RepositoryFixtures.snapshot(branch: "feature/login", ahead: 1))
+        await harness.addRepository(
+            "a",
+            name: "app",
+            snapshot: RepositoryFixtures.snapshot(branch: "feature/login", ahead: 1)
+        )
         await harness.repositories.start()
         harness.settings.updatePreferences { $0.requiresSyncConfirmation = false }
         let service = harness.makeSync()
@@ -45,8 +53,16 @@ struct SyncServiceTests {
     @MainActor
     func syncsSelectionOnly() async {
         let harness = ServiceHarness()
-        await harness.addRepository("a", name: "a", snapshot: RepositoryFixtures.snapshot(branch: "feature/a", ahead: 1))
-        await harness.addRepository("b", name: "b", snapshot: RepositoryFixtures.snapshot(branch: "feature/b", ahead: 1))
+        await harness.addRepository(
+            "a",
+            name: "a",
+            snapshot: RepositoryFixtures.snapshot(branch: "feature/a", ahead: 1)
+        )
+        await harness.addRepository(
+            "b",
+            name: "b",
+            snapshot: RepositoryFixtures.snapshot(branch: "feature/b", ahead: 1)
+        )
         await harness.repositories.start()
         let service = harness.makeSync()
 
@@ -89,7 +105,10 @@ struct SyncServiceTests {
         await harness.addRepository(
             "a",
             name: "app",
-            snapshot: RepositoryFixtures.snapshot(branch: "feature/login", tracked: [GitFileChange(path: "A", status: .modified)]),
+            snapshot: RepositoryFixtures.snapshot(
+                branch: "feature/login",
+                tracked: [GitFileChange(path: "A", status: .modified)]
+            ),
             shared: shared
         )
         await harness.repositories.start()
@@ -109,7 +128,10 @@ struct SyncServiceTests {
         await harness.addRepository(
             "a",
             name: "app",
-            snapshot: RepositoryFixtures.snapshot(branch: "feature/login", tracked: [GitFileChange(path: "A", status: .modified)])
+            snapshot: RepositoryFixtures.snapshot(
+                branch: "feature/login",
+                tracked: [GitFileChange(path: "A", status: .modified)]
+            )
         )
         await harness.repositories.start()
         let service = harness.makeSync()
@@ -128,7 +150,11 @@ struct SyncServiceTests {
             $0.accountFallbackEnabled = false
             $0.accountAccessChecksEnabled = true
         }
-        await harness.addRepository("a", name: "app", snapshot: RepositoryFixtures.snapshot(branch: "feature/login", ahead: 1))
+        await harness.addRepository(
+            "a",
+            name: "app",
+            snapshot: RepositoryFixtures.snapshot(branch: "feature/login", ahead: 1)
+        )
         await harness.repositories.start()
         let service = harness.makeSync()
 
@@ -144,8 +170,16 @@ struct SyncServiceTests {
     @MainActor
     func reportsSummary() async {
         let harness = ServiceHarness()
-        await harness.addRepository("a", name: "a", snapshot: RepositoryFixtures.snapshot(branch: "feature/a", ahead: 1))
-        await harness.addRepository("b", name: "b", snapshot: RepositoryFixtures.snapshot(branch: "feature/b", ahead: 1))
+        await harness.addRepository(
+            "a",
+            name: "a",
+            snapshot: RepositoryFixtures.snapshot(branch: "feature/a", ahead: 1)
+        )
+        await harness.addRepository(
+            "b",
+            name: "b",
+            snapshot: RepositoryFixtures.snapshot(branch: "feature/b", ahead: 1)
+        )
         await harness.repositories.start()
         await harness.syncEngine.setResult(.failed(.diverged), for: "b")
         let service = harness.makeSync()
@@ -153,7 +187,7 @@ struct SyncServiceTests {
         await service.review(identifiers: nil)
         await service.run()
 
-        guard case .finished(let summary) = service.phase else {
+        guard case let .finished(summary) = service.phase else {
             Issue.record("expected a finished summary")
             return
         }
@@ -174,7 +208,7 @@ struct SyncServiceTests {
         await service.review(identifiers: nil)
         await service.run()
 
-        guard case .finished(let summary) = service.phase else {
+        guard case let .finished(summary) = service.phase else {
             Issue.record("expected a finished summary")
             return
         }
@@ -187,7 +221,11 @@ struct SyncServiceTests {
     @MainActor
     func writesOutcomesBack() async {
         let harness = ServiceHarness()
-        await harness.addRepository("a", name: "app", snapshot: RepositoryFixtures.snapshot(branch: "feature/login", ahead: 1))
+        await harness.addRepository(
+            "a",
+            name: "app",
+            snapshot: RepositoryFixtures.snapshot(branch: "feature/login", ahead: 1)
+        )
         await harness.repositories.start()
         let service = harness.makeSync()
 
@@ -201,7 +239,11 @@ struct SyncServiceTests {
     @MainActor
     func cancellingReviewRunsNothing() async {
         let harness = ServiceHarness()
-        await harness.addRepository("a", name: "app", snapshot: RepositoryFixtures.snapshot(branch: "feature/login", ahead: 1))
+        await harness.addRepository(
+            "a",
+            name: "app",
+            snapshot: RepositoryFixtures.snapshot(branch: "feature/login", ahead: 1)
+        )
         await harness.repositories.start()
         let service = harness.makeSync()
         await service.review(identifiers: nil)

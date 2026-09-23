@@ -8,13 +8,13 @@ enum WorkspaceManifestError: Error, Equatable {
 
     var message: String {
         switch self {
-        case .fileUnreadable(let path):
+        case let .fileUnreadable(path):
             String(localized: "The manifest at \(path) could not be read.")
-        case .malformed(let detail):
+        case let .malformed(detail):
             String(localized: "The manifest is not in a format homerun understands: \(detail)")
-        case .unsupportedVersion(let version):
+        case let .unsupportedVersion(version):
             String(localized: "This manifest is version \(version), which this build of homerun does not support.")
-        case .writeFailed(let detail):
+        case let .writeFailed(detail):
             String(localized: "The manifest could not be written: \(detail)")
         }
     }

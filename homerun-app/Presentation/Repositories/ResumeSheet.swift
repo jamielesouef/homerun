@@ -37,11 +37,11 @@ struct ResumeSheet: View {
         switch resume.phase {
         case .idle:
             ProgressView()
-        case .reviewing(let plan):
+        case let .reviewing(plan):
             review(plan)
-        case .running(let progress):
+        case let .running(progress):
             running(progress)
-        case .finished(let summary):
+        case let .finished(summary):
             finished(summary)
         }
     }
@@ -52,10 +52,14 @@ struct ResumeSheet: View {
                 Text(String(localized: "Prepare this Mac"))
                     .font(.title2.weight(.semibold))
 
-                Text(String(localized: "homerun will clone what is missing and fast-forward what is safe. Nothing is merged or rebased."))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                Text(
+                    String(
+                        localized: "homerun will clone what is missing and fast-forward what is safe. Nothing is merged or rebased."
+                    )
+                )
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             }
 
             ScrollView {
@@ -120,7 +124,8 @@ struct ResumeSheet: View {
                 VStack(alignment: .leading, spacing: AppSpacing.small) {
                     ForEach(summary.outcomes) { outcome in
                         HStack(alignment: .top, spacing: AppSpacing.small) {
-                            Image(systemName: outcome.succeeded ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            Image(systemName: outcome
+                                .succeeded ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                                 .foregroundStyle(outcome.succeeded ? Color.green : Color.red)
                                 .accessibilityHidden(true)
 
@@ -165,13 +170,13 @@ struct ResumeSheet: View {
 }
 
 #if DEBUG
-#Preview("Review") {
-    ResumeSheet()
-        .environment(\.resumeService, PreviewGraph.populated.resume)
-}
+    #Preview("Review") {
+        ResumeSheet()
+            .environment(\.resumeService, PreviewGraph.populated.resume)
+    }
 
-#Preview("Nothing to prepare") {
-    ResumeSheet()
-        .environment(\.resumeService, PreviewGraph.empty.resume)
-}
+    #Preview("Nothing to prepare") {
+        ResumeSheet()
+            .environment(\.resumeService, PreviewGraph.empty.resume)
+    }
 #endif

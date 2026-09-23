@@ -38,7 +38,6 @@ enum WorkspacePlanUseCase {
         guard let remoteURL = entry.remoteURL, remoteURL.isEmpty == false else {
             return .noRemote
         }
-
         guard let workspaceRoot else {
             return .noWorkspaceRoot
         }

@@ -56,28 +56,35 @@ enum ReadinessIssue: Equatable, Identifiable {
             String(localized: "There is no branch to push, so the other Mac has nothing to check out.")
         case .noRemote:
             String(localized: "Nothing here can reach another Mac until a remote is configured.")
-        case .currentBranchNotPushed(let count):
+        case let .currentBranchNotPushed(count):
             String(localized: "\(count) commit(s) on the current branch exist only on this Mac.")
         case .divergedBranch:
             String(localized: "The branch and its remote have both moved on. Resolve it here before handing over.")
-        case .uncommittedChanges(let count):
+        case let .uncommittedChanges(count):
             String(localized: "\(count) tracked file(s) have changes that are not committed yet.")
-        case .untrackedFiles(let paths):
+        case let .untrackedFiles(paths):
             String(localized: "These files are not in git and will not travel: \(paths.joined(separator: ", ")).")
-        case .localOnlyBranches(let names):
+        case let .localOnlyBranches(names):
             String(localized: "These branches have never been pushed: \(names.joined(separator: ", ")).")
-        case .unpushedBranchCommits(let names):
+        case let .unpushedBranchCommits(names):
             String(localized: "These branches have commits that exist only here: \(names.joined(separator: ", ")).")
-        case .unpushedTags(let names):
+        case let .unpushedTags(names):
             String(localized: "These tags have not been pushed: \(names.joined(separator: ", ")).")
-        case .submoduleChanges(let paths):
+        case let .submoduleChanges(paths):
             String(localized: "These submodules differ from their recorded commit: \(paths.joined(separator: ", ")).")
         case .missingSetupInstructions:
             String(localized: "The manifest records no setup instructions, so another Mac has nothing to follow.")
-        case .missingConfigurationTemplates(let paths):
-            String(localized: "The manifest expects these configuration templates, which are not in the repository: \(paths.joined(separator: ", ")).")
-        case .requiredEnvironmentVariables(let names):
-            String(localized: "These environment variables must be set by hand on the other Mac: \(names.joined(separator: ", ")). Their values are never copied.")
+        case let .missingConfigurationTemplates(paths):
+            String(
+                localized: "The manifest expects these configuration templates, which are not in the repository: \(paths.joined(separator: ", "))."
+            )
+        case let .requiredEnvironmentVariables(names):
+            String(
+                localized: """
+                These environment variables must be set by hand on the other Mac: \(names.joined(separator: ", ")). \
+                Their values are never copied.
+                """
+            )
         }
     }
 }

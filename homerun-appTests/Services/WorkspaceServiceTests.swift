@@ -19,7 +19,10 @@ struct WorkspaceServiceTests {
     func previewsManifest() async {
         let harness = ServiceHarness()
         harness.settings.updateLocalSettings { $0.workspaceRootPath = "/dev" }
-        await harness.manifestStore.setManifest(manifest([RepositoryFixtures.shared("a", name: "app")]), at: manifestURL)
+        await harness.manifestStore.setManifest(
+            manifest([RepositoryFixtures.shared("a", name: "app")]),
+            at: manifestURL
+        )
         let service = harness.makeWorkspace()
 
         await service.loadManifest(at: manifestURL)
@@ -44,7 +47,10 @@ struct WorkspaceServiceTests {
     @MainActor
     func repreviewsOnRootChange() async {
         let harness = ServiceHarness()
-        await harness.manifestStore.setManifest(manifest([RepositoryFixtures.shared("a", name: "app")]), at: manifestURL)
+        await harness.manifestStore.setManifest(
+            manifest([RepositoryFixtures.shared("a", name: "app")]),
+            at: manifestURL
+        )
         let service = harness.makeWorkspace()
         await service.loadManifest(at: manifestURL)
 
@@ -90,7 +96,10 @@ struct WorkspaceServiceTests {
         var existing = RepositoryFixtures.shared("a", name: "app")
         existing.lastSuccessfulSyncDate = Date(timeIntervalSince1970: 400)
         harness.sharedStore.repositories = [existing]
-        await harness.manifestStore.setManifest(manifest([RepositoryFixtures.shared("a", name: "renamed")]), at: manifestURL)
+        await harness.manifestStore.setManifest(
+            manifest([RepositoryFixtures.shared("a", name: "renamed")]),
+            at: manifestURL
+        )
         let service = harness.makeWorkspace()
         await service.loadManifest(at: manifestURL)
 

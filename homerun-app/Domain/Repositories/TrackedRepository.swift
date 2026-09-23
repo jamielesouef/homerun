@@ -24,7 +24,6 @@ struct TrackedRepository: Equatable, Identifiable {
         guard isCloned else {
             return .notCloned
         }
-
         guard isLoadingSnapshot == false else {
             return .loading
         }

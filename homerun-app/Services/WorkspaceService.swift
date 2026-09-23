@@ -16,7 +16,7 @@ final class WorkspaceService {
     private(set) var lastAppliedMessage: String?
 
     var loadedManifest: WorkspaceManifest? {
-        guard case .loaded(let manifest, _) = loadState else {
+        guard case let .loaded(manifest, _) = loadState else {
             return nil
         }
 
@@ -24,7 +24,7 @@ final class WorkspaceService {
     }
 
     var plan: WorkspacePlan? {
-        guard case .loaded(_, let plan) = loadState else {
+        guard case let .loaded(_, plan) = loadState else {
             return nil
         }
 
@@ -99,7 +99,7 @@ final class WorkspaceService {
     }
 
     func applyManifest() async {
-        guard case .loaded(let manifest, _) = loadState else {
+        guard case let .loaded(manifest, _) = loadState else {
             return
         }
 
@@ -133,7 +133,8 @@ final class WorkspaceService {
             try await manifestStore.save(manifest, to: url)
             settings.updateLocalSettings { $0.manifestPath = url.path(percentEncoded: false) }
             loadState = .loaded(manifest, preview(manifest))
-            lastAppliedMessage = String(localized: "Wrote \(manifest.repositories.count) repository(s) to \(url.lastPathComponent).")
+            lastAppliedMessage =
+                String(localized: "Wrote \(manifest.repositories.count) repository(s) to \(url.lastPathComponent).")
         } catch {
             loadState = .error(error)
         }
@@ -146,7 +147,7 @@ final class WorkspaceService {
     // MARK: - Helpers
 
     private func refreshPreview() {
-        guard case .loaded(let manifest, _) = loadState else {
+        guard case let .loaded(manifest, _) = loadState else {
             return
         }
 
