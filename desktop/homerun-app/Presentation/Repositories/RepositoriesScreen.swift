@@ -17,7 +17,7 @@ struct RepositoriesScreen: View {
 
     // MARK: - State
 
-    @State private var selection: String?
+    @State private var selection: Set<String> = []
     @State private var discovered: [DiscoveredRepository] = []
     @State private var pendingRemoval: RepositoryRemoval?
 
@@ -68,7 +68,7 @@ struct RepositoriesScreen: View {
 
                 Button(String(localized: "Sync selected"), systemImage: "arrow.triangle.2.circlepath") {
                     Task {
-                        await sync.review(identifiers: selection.map { [$0] })
+                        await sync.review(identifiers: selection.isEmpty ? nil : selection)
                     }
                 }
             }
@@ -152,25 +152,41 @@ struct RepositoriesScreen: View {
 
         return List(visible, selection: $selection) { repository in
             RepositoryRowView(repository: repository)
-                .contextMenu {
-                    Button(String(localized: "Sync")) {
-                        Task {
-                            await sync.review(identifiers: [repository.id])
-                        }
-                    }
-
-                    Divider()
-
-                    Button(String(localized: "Remove this Mac's path"), role: .destructive) {
-                        pendingRemoval = RepositoryRemoval(identifier: repository.id, scope: .local)
-                    }
-
-                    Button(String(localized: "Remove from the shared workspace"), role: .destructive) {
-                        pendingRemoval = RepositoryRemoval(identifier: repository.id, scope: .shared)
-                    }
-                }
+        }
+        .contextMenu(forSelectionType: String.self) { identifiers in
+            menu(for: identifiers)
+        }
+        .onDeleteCommand {
+            requestRemoval(of: selection, scope: .shared)
         }
         .animation(.snappy, value: visible.map(\.id))
+    }
+
+    @ViewBuilder
+    private func menu(for identifiers: Set<String>) -> some View {
+        if identifiers.isEmpty == false {
+            Button(String(localized: "Sync")) {
+                Task {
+                    await sync.review(identifiers: identifiers)
+                }
+            }
+
+            Divider()
+        }
+
+        Button(String(localized: "Select all"), action: selectAll)
+
+        if identifiers.isEmpty == false {
+            Divider()
+
+            Button(String(localized: "Remove this Mac's path"), role: .destructive) {
+                requestRemoval(of: identifiers, scope: .local)
+            }
+
+            Button(String(localized: "Remove from the shared workspace"), role: .destructive) {
+                requestRemoval(of: identifiers, scope: .shared)
+            }
+        }
     }
 
     // MARK: - Bottom bar
@@ -195,7 +211,15 @@ struct RepositoriesScreen: View {
 
     @ViewBuilder
     private var detail: some View {
-        if let selection, let repository = repositories.repository(identifier: selection) {
+        if selection.count > 1 {
+            EmptyStateView(
+                symbolName: "checklist",
+                title: String(localized: "\(selection.count) repositories selected"),
+                message: String(
+                    localized: "Right-click to sync or remove them, or press Delete to remove them from the shared workspace."
+                )
+            )
+        } else if let identifier = selection.first, let repository = repositories.repository(identifier: identifier) {
             RepositoryDetailView(repository: repository)
         } else {
             EmptyStateView(
@@ -268,16 +292,26 @@ struct RepositoriesScreen: View {
         }
     }
 
-    private func perform(_ removal: RepositoryRemoval) {
-        if selection == removal.identifier {
-            selection = nil
+    private func selectAll() {
+        selection = Set(repositories.visibleRepositories.map(\.id))
+    }
+
+    private func requestRemoval(of identifiers: Set<String>, scope: ConfigurationScope) {
+        guard identifiers.isEmpty == false else {
+            return
         }
+
+        pendingRemoval = RepositoryRemoval(identifiers: identifiers, scope: scope)
+    }
+
+    private func perform(_ removal: RepositoryRemoval) {
+        selection.subtract(removal.identifiers)
 
         switch removal.scope {
         case .local:
-            repositories.removeLocalPathMapping(identifier: removal.identifier)
+            repositories.removeLocalPathMappings(identifiers: removal.identifiers)
         case .shared:
-            repositories.removeFromSharedWorkspace(identifier: removal.identifier)
+            repositories.removeFromSharedWorkspace(identifiers: removal.identifiers)
         }
     }
 }

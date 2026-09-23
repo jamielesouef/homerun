@@ -184,19 +184,37 @@ final class RepositoriesService: SingleFlightRefreshing {
 
     // MARK: - Maintenance
 
-    func removeFromSharedWorkspace(identifier: String) {
-        store { () throws(PersistenceError) in
-            try sharedStore.remove(identifier: identifier)
+    func removeFromSharedWorkspace(identifiers: Set<String>) {
+        guard identifiers.isEmpty == false else {
+            return
         }
-        settings.removeLocalPath(for: identifier)
-        repositories.removeAll { $0.id == identifier }
-        lastMaintenanceMessage = String(localized: "Removed from the shared workspace. No files were deleted.")
+
+        for identifier in identifiers {
+            store { () throws(PersistenceError) in
+                try sharedStore.remove(identifier: identifier)
+            }
+            settings.removeLocalPath(for: identifier)
+        }
+
+        repositories.removeAll { identifiers.contains($0.id) }
+        lastMaintenanceMessage = String(
+            localized: "Removed \(identifiers.count) repository(s) from the shared workspace. No files were deleted."
+        )
     }
 
-    func removeLocalPathMapping(identifier: String) {
-        settings.removeLocalPath(for: identifier)
-        forgetLocalCheckout(of: [identifier])
-        lastMaintenanceMessage = String(localized: "Removed this Mac's path. The shared workspace entry is unchanged.")
+    func removeLocalPathMappings(identifiers: Set<String>) {
+        guard identifiers.isEmpty == false else {
+            return
+        }
+
+        for identifier in identifiers {
+            settings.removeLocalPath(for: identifier)
+        }
+
+        forgetLocalCheckout(of: identifiers)
+        lastMaintenanceMessage = String(
+            localized: "Removed this Mac's path for \(identifiers.count) repository(s). The shared workspace is unchanged."
+        )
     }
 
     @discardableResult
