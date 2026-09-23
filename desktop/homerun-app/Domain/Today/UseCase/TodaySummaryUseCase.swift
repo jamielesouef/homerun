@@ -1,0 +1,46 @@
+import Foundation
+
+enum TodaySummaryUseCase {
+    static func summary(
+        for repositories: [TrackedRepository],
+        readiness: [String: ReadinessReport]
+    ) -> TodaySummary {
+        TodaySummary(
+            unfinishedWork: repositories.filter(\.hasLocalOnlyWork),
+            syncProblems: repositories.filter { hasSyncProblem($0) },
+            readyToResume: repositories.filter { isReadyToResume($0, readiness: readiness) },
+            notClonedHere: repositories.filter { $0.isCloned == false },
+            lastSuccessfulSync: repositories.compactMap(\.shared.lastSuccessfulSyncDate).max()
+        )
+    }
+
+    // MARK: - Helpers
+
+    private static func hasSyncProblem(_ repository: TrackedRepository) -> Bool {
+        switch repository.status {
+        case .failed,
+             .diverged,
+             .unreadable:
+            return true
+        case .notCloned:
+            return false
+        case .clean,
+             .dirty,
+             .ahead,
+             .behind:
+            return repository.snapshot?.hasRemote == false
+        }
+    }
+
+    private static func isReadyToResume(_ repository: TrackedRepository, readiness: [String: ReadinessReport]) -> Bool {
+        guard repository.isCloned, hasSyncProblem(repository) == false else {
+            return false
+        }
+
+        guard let report = readiness[repository.id] else {
+            return repository.hasLocalOnlyWork == false
+        }
+
+        return report.isReadyToResume
+    }
+}
