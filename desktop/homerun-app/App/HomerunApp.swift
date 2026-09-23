@@ -1,9 +1,10 @@
 import SwiftUI
 
-@main struct MyApp: App {
+@main
+struct HomerunApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            Text(verbatim: "Homerun")
         }
     }
 }

@@ -1,0 +1,167 @@
+app: Homerun macOS
+
+architecture:
+  - Read docs/templates/README.md first and follow its architecture.
+  - Use SwiftData with iCloud for shared app preferences and synced app metadata.
+  - Swift 6, strict concurrency, async/await (no combine)
+  - MV, no MVVM
+  - Treat the versioned workspace manifest as authoritative for repository membership, URLs, preferred relative paths, and setup requirements.
+  - Keep absolute paths, checkout status, workspace roots, tool locations, and credentials local to each Mac.
+  - Store the last successful handoff branch and commit as shared app metadata.
+  - Commit after each completed feature.
+  - Add unit tests for each feature.
+  - Do not add UI tests.
+
+screens:
+  launch:
+    - Show the logo while the app is loading, without an artificial delay.
+  onboarding:
+    - Skip onboarding when required checks pass.
+    - Check that Git CLI is available; Git is required.
+    - Check for the optional GitHub CLI, gh.
+    - If gh is installed, show authentication status and offer sign-in when needed.
+    - Allow ordinary Git sync without gh using existing Git authentication.
+    - Enable GitHub account management and fallback only when gh is installed and authenticated.
+  navigation:
+    type: NavigationSplitView
+    default: Today
+    items:
+      - Today
+      - Repositories
+      - GitHub Accounts
+      - Cleaner
+      - Settings
+
+features:
+  today:
+    dashboard:
+      - Show unfinished work, sync problems, and projects ready to resume.
+      - Highlight repositories with work that exists only on this Mac.
+      - Show the last successful sync and any actions needed.
+      - Review and sync all repositories from one place.
+    portable_workspace:
+      - Store repository URLs, preferred relative paths, and setup requirements in a versioned manifest.
+      - Recreate a workspace from the manifest on another Mac.
+      - Keep machine-specific paths and preferences separate from shared configuration.
+      - Preview which repositories will be cloned or updated.
+      - Support a different workspace root on each Mac.
+      - Treat repositories absent from this Mac as not cloned, without removing them from the shared workspace.
+    readiness_checks:
+      - Distinguish a successful current-branch push from a project that is fully ready to resume.
+      - Surface untracked files that may need to be included.
+      - Identify local-only branches, unpushed branch commits, and unpushed tags.
+      - Check for submodule changes that require attention.
+      - Flag missing setup instructions.
+      - Track required environment variable names and local configuration templates without copying secrets.
+      - Explain anything that could prevent work from continuing on another Mac.
+
+  repositories:
+    browsing:
+      - List and manage all tracked repositories.
+      - Show each repository's branch, local changes, ahead/behind counts, and sync status.
+      - Filter by dirty, clean, ahead, behind, or failed.
+      - View changes and recent activity in a repository detail pane.
+    sync:
+      - Sync all repositories or select specific repositories.
+      - Preview the sync plan without making changes.
+      - Confirm the plan before syncing, with an optional skip-confirmation setting.
+      - Automatically create timestamped WIP commits containing tracked-file changes, including deletions.
+      - Exclude untracked files from automatic WIP commits; let users explicitly select them in the review before committing.
+      - Never automatically include ignored files.
+      - Push only the current branch; show other unsynced branches and tags as outstanding readiness issues.
+      - Flag missing push destinations and diverged branches for attention; do not force-push or automatically merge or rebase.
+      - Do not automatically commit changes inside submodules; report them for attention.
+      - Show live progress and a summary of successful, skipped, and failed operations.
+      - Record the branch and commit after a successful push for use when resuming elsewhere.
+    discovery:
+      - Add a repository using a folder picker, path, or drag and drop.
+      - Scan a folder recursively to discover Git repositories.
+      - Respect .gitignore rules and configurable ignored folder names during discovery.
+      - Deduplicate entries and remove stale local path mappings without deleting shared workspace entries.
+      - Preserve existing repository settings when adding a repository again.
+    repository_configuration:
+      - Allow or prevent syncing main and master branches per repository.
+      - Set a custom WIP commit prefix per repository.
+      - Fall back to the app-wide WIP commit prefix, then WIP.
+      - Remove repositories from the shared workspace only through an explicit removal action, without deleting their files.
+      - Clearly distinguish removing a local path mapping from removing a shared workspace entry.
+      - Provide maintenance actions to remove stale local mappings, remove duplicates, or clear tracked repository configuration.
+      - Confirm destructive configuration changes and explain whether their scope is local or shared.
+    resume:
+      - Prepare another Mac to continue working.
+      - Identify and clone missing repositories.
+      - Fetch remote updates and show what changed.
+      - Safely fast-forward repositories when possible.
+      - Flag local changes and diverged branches before updating.
+      - Use the recorded handoff branch and commit to help locate and check out the branch used on the previous Mac.
+      - Offer to open a project after it is ready.
+
+  github_accounts:
+    - Show available gh accounts and authentication status.
+    - Associate repositories with a preferred GitHub account.
+    - Check account access before syncing when enabled.
+    - Retry failed push authentication using other available gh accounts when fallback is enabled.
+    - Restore the previously active account after fallback attempts, including failed attempts.
+    - Show account-switching progress and authentication failures.
+    - Explain when gh account switching does not apply to the repository's Git authentication method.
+    - Keep ordinary Git sync available when gh account features are unavailable.
+
+  cleaner:
+    - Show storage used by installed Apple simulator runtimes.
+    - Allow removal of selected simulator runtimes through supported system tooling.
+    - Do not delete SDKs bundled inside Xcode or entire Xcode installations.
+    - Show storage used by Derived Data at default, project-specific, and custom paths.
+    - Allow removal of selected Derived Data.
+    - Show the exact items and estimated space recovered before deletion.
+    - Always require confirmation before deleting simulator runtimes or Derived Data.
+
+  menu_bar:
+    - Show an at-a-glance sync and readiness status.
+    - Display how many repositories have work only on this Mac.
+    - Provide quick access to review, sync, and resume.
+    - Surface sync failures and required actions.
+    - Open the full app for detailed review.
+
+settings:
+  today:
+    - Choose the default repository status filter.
+    - Choose whether to show repositories that are clean and fully synced.
+  repositories:
+    - Require confirmation before syncing, with an option to skip confirmation.
+    - Set the app-wide WIP commit prefix, falling back to WIP.
+    - Set the default repository list sort order.
+  discovery:
+    - Manage folder names excluded from recursive discovery.
+  per_repository:
+    - Allow or prevent syncing main and master branches.
+    - Override the app-wide WIP commit prefix.
+    - Choose a preferred GitHub account.
+  repository_maintenance:
+    - Remove individual repositories from the shared workspace without deleting files.
+    - Remove stale local path mappings without changing shared workspace membership.
+    - Remove duplicate entries.
+    - Clear tracked repository configuration with an explicit local or shared scope.
+  github_accounts:
+    - Enable or disable fallback to other available accounts after push authentication failures.
+    - Enable or disable account-access checks before syncing.
+  resume:
+    - Choose whether safe fast-forward updates are preselected in the preparation plan.
+    - Choose whether to offer to open a project after preparation succeeds.
+    - Set the preferred application for opening projects on this Mac.
+  portable_workspace:
+    - Select the versioned workspace manifest to use.
+    - Set this Mac's workspace root for cloning repositories.
+    - Configure preferred relative paths for repositories in the manifest.
+    - Load a manifest and preview workspace changes.
+  readiness_checks:
+    - Configure required environment variable names per repository in the manifest.
+    - Configure expected local configuration templates per repository in the manifest.
+    - Set the location of setup instructions per repository in the manifest.
+  cleaner:
+    - Include or exclude the default Derived Data location.
+    - Manage project-specific and custom Derived Data paths on this Mac.
+    - Choose the default cleanup categories shown in the review.
+  menu_bar:
+    - Show or hide the menu bar item on this Mac.
+    - Choose whether the menu bar displays a count of repositories with local-only work.
+    - Choose whether closing the main window keeps homerun running in the menu bar.
