@@ -25,8 +25,15 @@ struct RepositoriesScreen: View {
 
     var body: some View {
         HSplitView {
-            list
-                .frame(minWidth: Constants.listWidth, idealWidth: Constants.listWidth)
+            VStack(spacing: 0) {
+                list
+
+                Divider()
+
+                AddRepositoryByPathField(homeDirectory: FileManager.default.homeDirectoryForCurrentUser)
+                    .padding(AppSpacing.small)
+            }
+            .frame(minWidth: Constants.listWidth, idealWidth: Constants.listWidth)
 
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

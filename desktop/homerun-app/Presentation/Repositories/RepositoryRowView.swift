@@ -25,6 +25,12 @@ struct RepositoryRowView: View {
                 }
             }
 
+            if let changes = changeDescription {
+                Text(changes)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             if let counts = divergenceDescription {
                 Text(counts)
                     .font(.caption)
@@ -35,6 +41,16 @@ struct RepositoryRowView: View {
     }
 
     // MARK: - Helpers
+
+    private var changeDescription: String? {
+        guard let workingTree = repository.snapshot?.workingTree, workingTree.isClean == false else {
+            return nil
+        }
+
+        return String(
+            localized: "\(workingTree.trackedChanges.count) changed, \(workingTree.untrackedPaths.count) untracked"
+        )
+    }
 
     private var divergenceDescription: String? {
         guard let snapshot = repository.snapshot, snapshot.aheadCount > 0 || snapshot.behindCount > 0 else {
