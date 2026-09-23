@@ -6,14 +6,17 @@ struct SnakeProgressView: View {
     private enum Constants {
         static let defaultSize: CGFloat = 13
         static let lineWidth: CGFloat = 2
-        static let bodyLength: CGFloat = 0.72
-        static let rotationDuration: Double = 0.85
+        static let shortestBody: CGFloat = 0.06
+        static let chaseDuration: Double = 1.1
+        static let turnDuration: Double = 2.4
         static let fullTurn: Double = 360
     }
 
     // MARK: - State
 
-    @State private var isChasing = false
+    @State private var head: CGFloat = Constants.shortestBody
+    @State private var tail: CGFloat = 0
+    @State private var turn: Double = 0
 
     // MARK: - Inputs
 
@@ -23,24 +26,28 @@ struct SnakeProgressView: View {
 
     var body: some View {
         Circle()
-            .trim(from: 0, to: Constants.bodyLength)
-            .stroke(
-                AngularGradient(
-                    colors: [.accentColor.opacity(0), .accentColor],
-                    center: .center
-                ),
-                style: StrokeStyle(lineWidth: Constants.lineWidth, lineCap: .round)
-            )
-            .rotationEffect(.degrees(isChasing ? Constants.fullTurn : 0))
+            .trim(from: tail, to: head)
+            .stroke(.tint, style: StrokeStyle(lineWidth: Constants.lineWidth, lineCap: .round))
+            .rotationEffect(.degrees(turn))
             .frame(width: size, height: size)
-            .animation(
-                .linear(duration: Constants.rotationDuration).repeatForever(autoreverses: false),
-                value: isChasing
-            )
-            .onAppear {
-                isChasing = true
-            }
+            .onAppear(perform: startChasing)
             .accessibilityHidden(true)
+    }
+
+    // MARK: - Helpers
+
+    private func startChasing() {
+        withAnimation(.easeOut(duration: Constants.chaseDuration).repeatForever(autoreverses: false)) {
+            head = 1
+        }
+
+        withAnimation(.easeIn(duration: Constants.chaseDuration).repeatForever(autoreverses: false)) {
+            tail = 1 - Constants.shortestBody
+        }
+
+        withAnimation(.linear(duration: Constants.turnDuration).repeatForever(autoreverses: false)) {
+            turn = Constants.fullTurn
+        }
     }
 }
 
@@ -56,8 +63,8 @@ struct SnakeProgressView: View {
     .padding(AppSpacing.regular)
 }
 
-#Preview("Larger") {
-    SnakeProgressView(size: 48)
+#Preview("Larger, so the chase is visible") {
+    SnakeProgressView(size: 96)
         .padding(AppSpacing.xlarge)
 }
 #endif
