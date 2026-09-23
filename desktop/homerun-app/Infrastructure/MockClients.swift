@@ -208,6 +208,10 @@ final class MockLocalSettingsStore: LocalSettingsStoring {
     func save(_ settings: LocalSettings) {
         self.settings = settings
     }
+
+    func reset() {
+        settings = .default
+    }
 }
 
 @MainActor

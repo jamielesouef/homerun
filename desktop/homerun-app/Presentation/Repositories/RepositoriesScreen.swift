@@ -16,8 +16,7 @@ struct RepositoriesScreen: View {
     // MARK: - State
 
     @State private var selection: String?
-    @State private var isImportingFolder = false
-    @State private var isScanningFolder = false
+    @State private var folderImportPurpose: FolderImportPurpose?
     @State private var discovered: [DiscoveredRepository] = []
     @State private var pendingRemoval: RepositoryRemoval?
 
@@ -58,11 +57,11 @@ struct RepositoriesScreen: View {
                 .pickerStyle(.menu)
 
                 Button(String(localized: "Add repository"), systemImage: "plus") {
-                    isImportingFolder = true
+                    folderImportPurpose = .addRepository
                 }
 
                 Button(String(localized: "Scan a folder"), systemImage: "magnifyingglass") {
-                    isScanningFolder = true
+                    folderImportPurpose = .scanFolder
                 }
 
                 Button(String(localized: "Sync selected"), systemImage: "arrow.triangle.2.circlepath") {
@@ -74,11 +73,13 @@ struct RepositoriesScreen: View {
         }
         .searchable(text: searchBinding)
         .syncFlow()
-        .fileImporter(isPresented: $isImportingFolder, allowedContentTypes: [.folder]) { result in
-            handleImport(result, isScan: false)
-        }
-        .fileImporter(isPresented: $isScanningFolder, allowedContentTypes: [.folder]) { result in
-            handleImport(result, isScan: true)
+        .fileImporter(isPresented: isImportingFolderBinding, allowedContentTypes: [.folder]) { result in
+            guard let purpose = folderImportPurpose else {
+                return
+            }
+
+            folderImportPurpose = nil
+            handleImport(result, isScan: purpose == .scanFolder)
         }
         .sheet(isPresented: discoveredBinding) {
             DiscoveredRepositoriesSheet(discovered: discovered) { chosen in
@@ -130,7 +131,7 @@ struct RepositoriesScreen: View {
                 title: String(localized: "No repositories tracked"),
                 message: String(localized: "Add a folder, scan a parent folder, or drag a repository in."),
                 actionTitle: String(localized: "Add repository"),
-                action: { isImportingFolder = true }
+                action: { folderImportPurpose = .addRepository }
             )
         case .loaded:
             loadedList
@@ -190,6 +191,19 @@ struct RepositoriesScreen: View {
         Binding(get: { repositories.searchText }, set: { repositories.searchText = $0 })
     }
 
+    private var isImportingFolderBinding: Binding<Bool> {
+        Binding(
+            get: { folderImportPurpose != nil },
+            set: { isPresented in
+                guard isPresented == false else {
+                    return
+                }
+
+                folderImportPurpose = nil
+            }
+        )
+    }
+
     private var discoveredBinding: Binding<Bool> {
         Binding(
             get: { discovered.isEmpty == false },
@@ -246,6 +260,11 @@ struct RepositoriesScreen: View {
             await repositories.removeFromSharedWorkspace(identifier: removal.identifier)
         }
     }
+}
+
+private enum FolderImportPurpose {
+    case addRepository
+    case scanFolder
 }
 
 #if DEBUG

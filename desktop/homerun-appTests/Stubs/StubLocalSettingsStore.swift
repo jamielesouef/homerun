@@ -7,6 +7,7 @@ final class StubLocalSettingsStore: LocalSettingsStoring {
 
     var settings: LocalSettings
     private(set) var saveCount = 0
+    private(set) var resetCount = 0
 
     // MARK: - Init
 
@@ -23,5 +24,10 @@ final class StubLocalSettingsStore: LocalSettingsStoring {
     func save(_ settings: LocalSettings) {
         self.settings = settings
         saveCount += 1
+    }
+
+    func reset() {
+        settings = .default
+        resetCount += 1
     }
 }

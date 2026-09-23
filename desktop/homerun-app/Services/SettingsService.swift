@@ -77,4 +77,26 @@ final class SettingsService {
             settings.repositoryPaths.removeValue(forKey: identifier)
         }
     }
+
+    // MARK: - Debug
+
+    func resetToFreshInstall() {
+        do {
+            try sharedStore.removeAllRepositories()
+            lastError = nil
+        } catch {
+            lastError = error
+        }
+
+        preferences = .default
+
+        do {
+            try sharedStore.save(preferences)
+        } catch {
+            lastError = error
+        }
+
+        localStore.reset()
+        localSettings = localStore.load()
+    }
 }

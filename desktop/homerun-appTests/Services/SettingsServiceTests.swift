@@ -71,4 +71,46 @@ struct SettingsServiceTests {
 
         #expect(harness.settings.lastError == .fetchFailed("iCloud unavailable"))
     }
+
+    // MARK: - Reset to fresh install
+
+    @Test("clears every shared repository")
+    @MainActor
+    func resetClearsSharedRepositories() {
+        let harness = ServiceHarness()
+        harness.sharedStore.repositories = [RepositoryFixtures.shared("a"), RepositoryFixtures.shared("b", name: "b")]
+
+        harness.settings.resetToFreshInstall()
+
+        #expect(harness.sharedStore.repositories.isEmpty)
+        #expect(harness.sharedStore.clearedAllCount == 1)
+    }
+
+    @Test("resets the shared preferences back to their defaults")
+    @MainActor
+    func resetRestoresDefaultPreferences() {
+        let harness = ServiceHarness()
+        harness.settings.updatePreferences { $0.wipCommitPrefix = "PARKED" }
+
+        harness.settings.resetToFreshInstall()
+
+        #expect(harness.settings.preferences == .default)
+        #expect(harness.sharedStore.preferences == .default)
+    }
+
+    @Test("resets this Mac's settings back to their defaults, including onboarding")
+    @MainActor
+    func resetRestoresDefaultLocalSettings() {
+        let harness = ServiceHarness()
+        harness.settings.updateLocalSettings { local in
+            local.workspaceRootPath = "/dev"
+            local.hasCompletedOnboarding = true
+            local.repositoryPaths["a"] = "/dev/a"
+        }
+
+        harness.settings.resetToFreshInstall()
+
+        #expect(harness.settings.localSettings == .default)
+        #expect(harness.localStore.resetCount == 1)
+    }
 }

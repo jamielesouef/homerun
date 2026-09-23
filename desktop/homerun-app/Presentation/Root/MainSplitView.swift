@@ -21,10 +21,18 @@ struct MainSplitView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(AppSection.allCases, selection: $section) { item in
-                NavigationLink(value: item) {
-                    Label(item.title, systemImage: item.symbolName)
+            VStack(spacing: 0) {
+                List(AppSection.allCases, selection: $section) { item in
+                    NavigationLink(value: item) {
+                        Label(item.title, systemImage: item.symbolName)
+                    }
                 }
+
+                #if DEBUG
+                Divider()
+
+                DebugMenuView()
+                #endif
             }
             .navigationSplitViewColumnWidth(min: Constants.sidebarMinimum, ideal: Constants.sidebarIdeal)
         } detail: {

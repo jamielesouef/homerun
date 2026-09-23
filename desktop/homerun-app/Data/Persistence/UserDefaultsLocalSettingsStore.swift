@@ -41,4 +41,8 @@ final class UserDefaultsLocalSettingsStore: LocalSettingsStoring {
 
         defaults.set(data, forKey: Constants.key)
     }
+
+    func reset() {
+        defaults.removeObject(forKey: Constants.key)
+    }
 }
