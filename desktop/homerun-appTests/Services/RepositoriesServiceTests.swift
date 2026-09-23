@@ -167,6 +167,23 @@ struct RepositoriesServiceTests {
         #expect(harness.sharedStore.removedIdentifiers == ["a"])
         #expect(harness.localStore.settings.repositoryPaths["a"] == nil)
         #expect(FileManager.default.fileExists(atPath: directory.path(percentEncoded: false)))
+        #expect(harness.repositories.repositories.isEmpty)
+        #expect(harness.repositories.loadState == .empty)
+    }
+
+    @Test("publishes a newly added repository without waiting for another load")
+    @MainActor
+    func publishesAddedRepositoryImmediately() async {
+        let harness = ServiceHarness()
+        await harness.repositories.start()
+        let directory = harness.makeDirectory("igloo")
+        await harness.gitClient.setSnapshot(RepositoryFixtures.snapshot(), at: directory)
+
+        await harness.repositories.add([DiscoveredRepository(url: directory)])
+
+        #expect(harness.repositories.repositories.map(\.name) == ["igloo"])
+        #expect(harness.repositories.visibleRepositories.map(\.name) == ["igloo"])
+        #expect(harness.repositories.repositories.first?.snapshot != nil)
     }
 
     @Test("removing this Mac's path leaves the shared workspace entry in place")

@@ -1,11 +1,12 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct RepositoriesScreen: View {
     // MARK: - Constants
 
     private enum Constants {
-        static let listWidth: CGFloat = 320
+        static let listMinimumWidth: CGFloat = 280
+        static let listIdealWidth: CGFloat = 320
+        static let listMaximumWidth: CGFloat = 380
     }
 
     // MARK: - Environment
@@ -23,7 +24,7 @@ struct RepositoriesScreen: View {
     // MARK: - View
 
     var body: some View {
-        HSplitView {
+        HStack(spacing: 0) {
             VStack(spacing: 0) {
                 list
 
@@ -31,7 +32,13 @@ struct RepositoriesScreen: View {
 
                 bottomBar
             }
-            .frame(minWidth: Constants.listWidth, idealWidth: Constants.listWidth)
+            .frame(
+                minWidth: Constants.listMinimumWidth,
+                idealWidth: Constants.listIdealWidth,
+                maxWidth: Constants.listMaximumWidth
+            )
+
+            Divider()
 
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -91,8 +98,10 @@ struct RepositoriesScreen: View {
                 secondaryButton: .cancel()
             )
         }
-        .onDrop(of: [.fileURL], isTargeted: nil) { providers in
-            handleDrop(providers)
+        .dropDestination(for: URL.self) { urls, _ in
+            addRepositories(at: urls)
+
+            return true
         }
     }
 
@@ -128,7 +137,6 @@ struct RepositoriesScreen: View {
     private var loadedList: some View {
         List(repositories.visibleRepositories, selection: $selection) { repository in
             RepositoryRowView(repository: repository)
-                .tag(repository.id)
                 .contextMenu {
                     Button(String(localized: "Sync")) {
                         Task {
@@ -231,27 +239,23 @@ struct RepositoriesScreen: View {
         }
     }
 
-    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
-        guard providers.isEmpty == false else {
-            return false
+    private func addRepositories(at urls: [URL]) {
+        guard urls.isEmpty == false else {
+            return
         }
 
-        for provider in providers {
-            _ = provider.loadTransferable(type: URL.self) { result in
-                guard case .success(let url) = result else {
-                    return
-                }
-
-                Task { @MainActor in
-                    _ = await repositories.addRepository(at: url)
-                }
+        Task {
+            for url in urls {
+                _ = await repositories.addRepository(at: url)
             }
         }
-
-        return true
     }
 
     private func perform(_ removal: RepositoryRemoval) async {
+        if selection == removal.identifier {
+            selection = nil
+        }
+
         switch removal.scope {
         case .local:
             await repositories.removeLocalPathMapping(identifier: removal.identifier)
