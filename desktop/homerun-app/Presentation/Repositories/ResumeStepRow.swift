@@ -4,13 +4,13 @@ struct ResumeStepRow: View {
     // MARK: - Inputs
 
     let step: ResumeStep
-    let setSelection: (Bool) -> Void
+    @Binding var isSelected: Bool
 
     // MARK: - View
 
     var body: some View {
         HStack(alignment: .top, spacing: AppSpacing.medium) {
-            Toggle(isOn: selectionBinding) {
+            Toggle(isOn: $isSelected) {
                 EmptyView()
             }
             .toggleStyle(.checkbox)
@@ -39,12 +39,6 @@ struct ResumeStepRow: View {
         .padding(AppSpacing.medium)
         .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: AppSpacing.small))
     }
-
-    // MARK: - Helpers
-
-    private var selectionBinding: Binding<Bool> {
-        Binding(get: { step.isSelected }, set: setSelection)
-    }
 }
 
 #if DEBUG
@@ -58,11 +52,11 @@ struct ResumeStepRow: View {
                 handoff: RepositoryHandoff(branch: "feature/login", commit: "abc1234def", recordedAt: .now),
                 isSelected: true
             ),
-            setSelection: { _ in }
+            isSelected: .constant(true)
         )
         ResumeStepRow(
             step: ResumeStep(identifier: "b", name: "tooling", action: .fastForward(4), handoff: nil, isSelected: true),
-            setSelection: { _ in }
+            isSelected: .constant(true)
         )
         ResumeStepRow(
             step: ResumeStep(
@@ -72,7 +66,7 @@ struct ResumeStepRow: View {
                 handoff: nil,
                 isSelected: false
             ),
-            setSelection: { _ in }
+            isSelected: .constant(false)
         )
     }
     .padding()

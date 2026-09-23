@@ -61,9 +61,13 @@ struct ResumeSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.small) {
                     ForEach(plan.steps) { step in
-                        ResumeStepRow(step: step) { isSelected in
-                            resume.setSelection(isSelected, for: step.identifier)
-                        }
+                        ResumeStepRow(
+                            step: step,
+                            isSelected: Binding(
+                                get: { step.isSelected },
+                                set: { isSelected in resume.setSelection(isSelected, for: step.identifier) }
+                            )
+                        )
                     }
                 }
             }

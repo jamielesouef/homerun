@@ -87,9 +87,8 @@ struct GitHubAccountsServiceTests {
         await harness.addRepository("a", name: "app", snapshot: RepositoryFixtures.snapshot())
         await harness.repositories.start()
         let service = harness.makeAccounts()
-        let repository = try? #require(harness.repositories.repositories.first)
 
-        guard let repository else {
+        guard let repository = harness.repositories.repositories.first else {
             Issue.record("expected a repository")
             return
         }

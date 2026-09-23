@@ -89,6 +89,6 @@ struct GitIgnoreRules: Equatable {
             return name == pattern
         }
 
-        return fnmatch(pattern, name, 0) == 0
+        return unsafe fnmatch(pattern, name, 0) == 0
     }
 }
