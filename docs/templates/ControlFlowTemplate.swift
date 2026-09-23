@@ -53,10 +53,7 @@ enum ExampleControlFlow {
     // MARK: - 1. Stacked guard
 
     static func firstResolvedURL(for id: String, resolved: [String: URL], isCancelled: Bool) -> URL? {
-        guard isCancelled == false else {
-            return nil
-        }
-        guard let url = resolved[id] else {
+        guard isCancelled == false, url = resolved[id] else {
             return nil
         }
 
@@ -66,12 +63,10 @@ enum ExampleControlFlow {
     // MARK: - 2. Independent early-return if chain
 
     static func isVisible(slug: String, hidesRestricted: Bool, isRestrictedSlug: Bool) -> Bool {
-        if hidesRestricted, isRestrictedSlug {
+        if hidesRestricted, isRestrictedSlug, slug.isEmpty {
             return false
         }
-        if slug.isEmpty {
-            return false
-        }
+
         return true
     }
 
