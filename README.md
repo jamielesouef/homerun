@@ -183,6 +183,10 @@ in a temporary folder.
 
 ## Architecture
 
+[`docs/architecture.md`](docs/architecture.md) describes how the macOS app is put
+together and why — the layers, the protocol seams, the two stores, and the
+constraints that are deliberate.
+
 Read [`docs/templates/README.md`](docs/templates/README.md) before adding to the
 macOS app. It is the contract the code follows, not a suggestion: layers run
 Domain ← Data ← Services ← Presentation, state lives in `@MainActor @Observable`
