@@ -20,6 +20,7 @@ struct RepositoriesScreen: View {
     @State private var selection: String?
     @State private var discovered: [DiscoveredRepository] = []
     @State private var pendingRemoval: RepositoryRemoval?
+    @State private var isDropTargeted = false
 
     // MARK: - View
 
@@ -37,6 +38,20 @@ struct RepositoriesScreen: View {
                 idealWidth: Constants.listIdealWidth,
                 maxWidth: Constants.listMaximumWidth
             )
+            .overlay {
+                if isDropTargeted {
+                    RepositoryDropTargetView()
+                }
+            }
+            .animation(.snappy, value: isDropTargeted)
+            .dropDestination(for: URL.self) { urls, _ in
+                isDropTargeted = false
+                addRepositories(at: urls)
+
+                return true
+            } isTargeted: { isTargeted in
+                isDropTargeted = isTargeted
+            }
 
             Divider()
 
@@ -97,11 +112,6 @@ struct RepositoriesScreen: View {
                 },
                 secondaryButton: .cancel()
             )
-        }
-        .dropDestination(for: URL.self) { urls, _ in
-            addRepositories(at: urls)
-
-            return true
         }
     }
 
