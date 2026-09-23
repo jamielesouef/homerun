@@ -17,6 +17,7 @@ protocol GitClienting: Sendable {
     func localTags(at url: URL) async throws(GitError) -> [String]
     func remoteTags(remote: String, at url: URL) async throws(GitError) -> Set<String>
     func remoteURL(at url: URL) async throws(GitError) -> String?
+    func headCommit(at url: URL) async throws(GitError) -> String?
     func branchExists(_ branch: String, at url: URL) async -> Bool
     func containsCommit(_ commit: String, at url: URL) async -> Bool
 }

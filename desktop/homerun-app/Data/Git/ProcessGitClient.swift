@@ -189,6 +189,16 @@ struct ProcessGitClient: GitClienting {
         return result.trimmedOutput.isEmpty ? nil : result.trimmedOutput
     }
 
+    func headCommit(at url: URL) async throws(GitError) -> String? {
+        let result = try await run(["rev-parse", "HEAD"], at: url)
+
+        guard result.succeeded, result.trimmedOutput.isEmpty == false else {
+            return nil
+        }
+
+        return result.trimmedOutput
+    }
+
     func branchExists(_ branch: String, at url: URL) async -> Bool {
         let result = try? await run(["rev-parse", "--verify", "--quiet", branch], at: url)
 
