@@ -8,6 +8,7 @@ struct WorkspaceRepository: Equatable, Identifiable, Codable {
     var allowsMainBranchSync: Bool
     var allowsMasterBranchSync: Bool
     var wipCommitPrefixOverride: String?
+    var omitsTimestampFromWIPCommit: Bool
     var preferredGitHubAccount: String?
     var setupInstructionsPath: String?
     var requiredEnvironmentVariableNames: [String]
@@ -28,6 +29,7 @@ struct WorkspaceRepository: Equatable, Identifiable, Codable {
         allowsMainBranchSync: Bool = false,
         allowsMasterBranchSync: Bool = false,
         wipCommitPrefixOverride: String? = nil,
+        omitsTimestampFromWIPCommit: Bool = false,
         preferredGitHubAccount: String? = nil,
         setupInstructionsPath: String? = nil,
         requiredEnvironmentVariableNames: [String] = [],
@@ -43,6 +45,7 @@ struct WorkspaceRepository: Equatable, Identifiable, Codable {
         self.allowsMainBranchSync = allowsMainBranchSync
         self.allowsMasterBranchSync = allowsMasterBranchSync
         self.wipCommitPrefixOverride = wipCommitPrefixOverride
+        self.omitsTimestampFromWIPCommit = omitsTimestampFromWIPCommit
         self.preferredGitHubAccount = preferredGitHubAccount
         self.setupInstructionsPath = setupInstructionsPath
         self.requiredEnvironmentVariableNames = requiredEnvironmentVariableNames

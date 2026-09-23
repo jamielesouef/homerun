@@ -28,6 +28,47 @@ struct WorkspaceManifestTests {
         #expect(try FileWorkspaceManifestStore.makeDecoder().decode(WorkspaceManifest.self, from: data) == manifest)
     }
 
+    @Test("reads a manifest written before the timestamp flag existed without losing the local value")
+    func readsManifestMissingTheTimestampFlag() throws {
+        let json = """
+        {
+          "version": 1,
+          "name": "Work",
+          "repositories": [
+            {
+              "identifier": "a",
+              "name": "app",
+              "preferred_relative_path": "app",
+              "allows_main_branch_sync": false,
+              "allows_master_branch_sync": false,
+              "required_environment_variable_names": [],
+              "expected_configuration_templates": []
+            }
+          ]
+        }
+        """
+        let data = try #require(json.data(using: .utf8))
+        let manifest = try FileWorkspaceManifestStore.makeDecoder().decode(WorkspaceManifest.self, from: data)
+        let entry = try #require(manifest.repositories.first)
+
+        var existing = RepositoryFixtures.shared("a")
+        existing.omitsTimestampFromWIPCommit = true
+
+        #expect(entry.merged(into: existing, addedDate: .distantPast).omitsTimestampFromWIPCommit)
+    }
+
+    @Test("carries the timestamp flag to another Mac once it is set")
+    func carriesTheTimestampFlag() throws {
+        var repository = RepositoryFixtures.shared()
+        repository.omitsTimestampFromWIPCommit = true
+
+        let manifest = WorkspaceManifest.make(name: "Work", repositories: [repository])
+        let data = try FileWorkspaceManifestStore.makeEncoder().encode(manifest)
+        let decoded = try FileWorkspaceManifestStore.makeDecoder().decode(WorkspaceManifest.self, from: data)
+
+        #expect(decoded.repositories.first?.omitsTimestampFromWIPCommit == true)
+    }
+
     @Test("rejects a manifest written by a newer build")
     func rejectsNewerVersion() {
         let manifest = WorkspaceManifest(version: WorkspaceManifest.currentVersion + 1, name: "Work", repositories: [])

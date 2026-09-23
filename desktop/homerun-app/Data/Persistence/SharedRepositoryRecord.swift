@@ -10,6 +10,7 @@ final class SharedRepositoryRecord {
     var allowsMainBranchSync: Bool = false
     var allowsMasterBranchSync: Bool = false
     var wipCommitPrefixOverride: String?
+    var omitsTimestampFromWIPCommit: Bool = false
     var preferredGitHubAccount: String?
     var setupInstructionsPath: String?
     var requiredEnvironmentVariableNames: [String] = []
@@ -35,6 +36,7 @@ final class SharedRepositoryRecord {
             allowsMainBranchSync: allowsMainBranchSync,
             allowsMasterBranchSync: allowsMasterBranchSync,
             wipCommitPrefixOverride: wipCommitPrefixOverride,
+            omitsTimestampFromWIPCommit: omitsTimestampFromWIPCommit,
             preferredGitHubAccount: preferredGitHubAccount,
             setupInstructionsPath: setupInstructionsPath,
             requiredEnvironmentVariableNames: requiredEnvironmentVariableNames,
@@ -53,6 +55,7 @@ final class SharedRepositoryRecord {
         allowsMainBranchSync = repository.allowsMainBranchSync
         allowsMasterBranchSync = repository.allowsMasterBranchSync
         wipCommitPrefixOverride = repository.wipCommitPrefixOverride
+        omitsTimestampFromWIPCommit = repository.omitsTimestampFromWIPCommit
         preferredGitHubAccount = repository.preferredGitHubAccount
         setupInstructionsPath = repository.setupInstructionsPath
         requiredEnvironmentVariableNames = repository.requiredEnvironmentVariableNames

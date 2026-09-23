@@ -8,6 +8,7 @@ struct WorkspaceManifestEntry: Equatable, Codable, Identifiable {
     var allowsMainBranchSync: Bool
     var allowsMasterBranchSync: Bool
     var wipCommitPrefixOverride: String?
+    var omitsTimestampFromWIPCommit: Bool?
     var preferredGitHubAccount: String?
     var setupInstructionsPath: String?
     var requiredEnvironmentVariableNames: [String]
@@ -27,6 +28,7 @@ struct WorkspaceManifestEntry: Equatable, Codable, Identifiable {
         case allowsMainBranchSync = "allows_main_branch_sync"
         case allowsMasterBranchSync = "allows_master_branch_sync"
         case wipCommitPrefixOverride = "wip_commit_prefix_override"
+        case omitsTimestampFromWIPCommit = "omits_timestamp_from_wip_commit"
         case preferredGitHubAccount = "preferred_github_account"
         case setupInstructionsPath = "setup_instructions_path"
         case requiredEnvironmentVariableNames = "required_environment_variable_names"
@@ -41,6 +43,7 @@ struct WorkspaceManifestEntry: Equatable, Codable, Identifiable {
         allowsMainBranchSync = repository.allowsMainBranchSync
         allowsMasterBranchSync = repository.allowsMasterBranchSync
         wipCommitPrefixOverride = repository.wipCommitPrefixOverride
+        omitsTimestampFromWIPCommit = repository.omitsTimestampFromWIPCommit
         preferredGitHubAccount = repository.preferredGitHubAccount
         setupInstructionsPath = repository.setupInstructionsPath
         requiredEnvironmentVariableNames = repository.requiredEnvironmentVariableNames
@@ -56,6 +59,7 @@ struct WorkspaceManifestEntry: Equatable, Codable, Identifiable {
         repository.allowsMainBranchSync = allowsMainBranchSync
         repository.allowsMasterBranchSync = allowsMasterBranchSync
         repository.wipCommitPrefixOverride = wipCommitPrefixOverride
+        repository.omitsTimestampFromWIPCommit = omitsTimestampFromWIPCommit ?? repository.omitsTimestampFromWIPCommit
         repository.preferredGitHubAccount = preferredGitHubAccount
         repository.setupInstructionsPath = setupInstructionsPath
         repository.requiredEnvironmentVariableNames = requiredEnvironmentVariableNames

@@ -28,6 +28,16 @@ struct WIPCommitMessageUseCaseTests {
         #expect(message == "WIP 2025-09-23 04:00:00")
     }
 
+    @Test("appends the time only when the app allows it and the repository has not opted out", arguments: [
+        (true, false, true),
+        (true, true, false),
+        (false, false, false),
+        (false, true, false)
+    ])
+    func combinesTheAppAndRepositoryTimestampSettings(appWide: Bool, repositoryOmits: Bool, expected: Bool) {
+        #expect(WIPCommitMessageUseCase.appendsTimestamp(appWide: appWide, repositoryOmits: repositoryOmits) == expected)
+    }
+
     @Test("leaves the timestamp off when the setting says not to append it")
     func omitsTheTimestamp() throws {
         let timeZone = try #require(TimeZone(identifier: "UTC"))

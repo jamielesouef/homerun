@@ -9,6 +9,10 @@ enum WIPCommitMessageUseCase {
         return repositoryOverride
     }
 
+    static func appendsTimestamp(appWide: Bool, repositoryOmits: Bool) -> Bool {
+        appWide && repositoryOmits == false
+    }
+
     static func message(
         repositoryOverride: String?,
         appWide: String?,

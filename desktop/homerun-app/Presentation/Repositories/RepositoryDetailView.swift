@@ -5,6 +5,7 @@ struct RepositoryDetailView: View {
 
     @Environment(\.repositoriesService) private var repositories
     @Environment(\.accountsService) private var accounts
+    @Environment(\.settingsService) private var settings
 
     // MARK: - State
 
@@ -81,6 +82,15 @@ struct RepositoryDetailView: View {
                 )
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 200)
+            }
+
+            Toggle(String(localized: "Append the time to the commit message"), isOn: timestampBinding)
+                .disabled(settings.preferences.appendsTimestampToWIPCommit == false)
+
+            if settings.preferences.appendsTimestampToWIPCommit == false {
+                Text(String(localized: "Timestamps are turned off for every repository in Settings."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Picker(String(localized: "Preferred GitHub account"), selection: accountBinding) {
@@ -194,6 +204,17 @@ struct RepositoryDetailView: View {
     }
 
     // MARK: - Helpers
+
+    private var timestampBinding: Binding<Bool> {
+        Binding(
+            get: { repository.shared.omitsTimestampFromWIPCommit == false },
+            set: { appendsTimestamp in
+                var shared = repository.shared
+                shared.omitsTimestampFromWIPCommit = appendsTimestamp == false
+                repositories.update(shared)
+            }
+        )
+    }
 
     private func branchSyncBinding(for branch: String) -> Binding<Bool> {
         Binding(
