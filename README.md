@@ -1,178 +1,224 @@
-# Homerun MacOS app
+# Homerun
 
-# Architecture
+Never leave work stranded on one Mac.
 
-- READ FIRST: docs/templates/README.md
-- Storage: SwiftData over icloud
-- Commit at each feature
-- Unit test for each feature
-- NO UI tests
-# Screns
+Homerun watches the git repositories you work in, commits whatever is still
+uncommitted at the end of the day, pushes it, and tells you what would stop you
+picking the work up somewhere else. It comes in two parts that share the idea
+but not the code:
 
-## Welcome screen
+- **`cli/`** — `homerun`, a command line tool for the one-shot "commit and push
+  everything before I close the lid" habit.
+- **`desktop/`** — a macOS app that keeps an eye on the same repositories, shows
+  what is outstanding, and helps set the next Mac up to continue.
 
-## Navigation Split View
+## Contents
 
-### Menu
-    - Today (default)
-    - Repositories
-    - Github Actions
-    - Cleaner
-    - Settings
+- [The command line tool](#the-command-line-tool)
+- [The macOS app](#the-macos-app)
+- [Repository layout](#repository-layout)
+- [Building and testing](#building-and-testing)
+- [Architecture](#architecture)
+- [Known gaps](#known-gaps)
+- [Licence](#licence)
 
-# V1 Features
+## The command line tool
 
+### Installing
 
-## Today Screen
+Through Homebrew:
 
-### Dashboard
-- Dashboard showing unfinished work, sync problems, and projects ready to resume.
-- Highlight repos with work that exists only on this Mac.
-- Show the last successful sync and any actions needed.
-- Review and sync all repos from one place.
+```sh
+brew install jamielesouef/tap/homerun
+```
 
-### Portable Workspace
+Or from a checkout, which builds in release mode and copies the binary onto your
+`PATH` (`/usr/local/bin` by default, override with `PREFIX`):
 
-- Store repository URLs, preferred relative paths, and setup metadata in a versioned manifest.
-- Recreate a workspace from the manifest on another Mac.
-- Keep machine-specific paths and preferences separate from shared configuration.
-- Preview which repositories will be cloned or updated.
-- Support a different workspace root on each Mac.
+```sh
+cd cli
+./install.sh
+```
 
-### Readiness Checks
+Needs macOS 13 or newer and the `git` command line tool.
 
-- Distinguish successfully pushed code from a project that is fully ready to resume.
-- Surface untracked files that may need to be included.
-- Identify local-only branches and unpushed tags.
-- Check for submodule changes that require attention.
-- Flag missing setup instructions.
-- Track required environment variables and local configuration templates without copying secrets.
-- Explain anything that could prevent work from continuing on another Mac.
+### Using it
 
-## Repositories Screen
+Running `homerun` with no arguments syncs, which is the common case. It scans
+every tracked repository, shows you the plan, and pushes what needs it.
 
-### Repos
-- List and manage all tracked repositories.
-- Show each repo's branch, local changes, ahead/behind counts, and sync status.
-- Filter repos by dirty, clean, ahead, behind, or failed.
-- View changes and recent activity in a repository detail pane.
-- Sync all repos or select specific repos.
-- Preview the sync plan without making changes.
-- Confirm the plan before syncing, with an optional skip-confirmation setting.
-- Automatically create timestamped WIP commits for dirty repos before pushing.
-- Show live progress and a summary of successful, skipped, and failed operations.
+```sh
+homerun                     # scan, show the plan, ask, push
+homerun --dry-run           # show the plan and exit, never prompts or writes
+homerun --yes               # skip the prompt
+homerun --repo my-app       # limit the scan to one repository, repeatable
+```
 
-### Repository Discovery
+Tracking repositories:
 
-- Add a repository using a folder picker, path, or drag and drop.
-- Scan a folder recursively to discover Git repositories.
-- Respect .gitignore rules and configurable ignored folder names during discovery.
-- Remove missing repository entries and deduplicate the list.
-- Preserve existing repository settings when adding a repo again.
+```sh
+homerun add .                       # track the repository in this folder
+homerun add ~/Developer --recursive # walk the tree, track every repository found
+homerun list                        # show what is tracked
+homerun rm .                        # stop tracking, by id, path, or "."
+```
 
-### Repository Settings
+`add --recursive` also purges tracked repositories whose path has gone and drops
+duplicate entries as it goes.
 
-- Allow or prevent syncing main and master branches per repository.
-- Set a custom WIP commit prefix per repository.
-- Set an app-wide default WIP commit prefix, falling back to WIP.
-- Remove repositories from tracking without deleting their files.
-- Manage folder names excluded from recursive discovery.
-- Remove missing entries, remove duplicates, or clear all tracked repository configuration.
-- Confirm destructive configuration changes before applying them.
+Per-repository options are set when adding, and re-adding a tracked repository
+keeps what you already set unless you pass the flag again:
 
-### Resume
+```sh
+homerun add . --main true           # allow pushing main and master
+homerun add . --wip-name PARKED     # prefix for this repository's WIP commits
+```
 
-- Prepare another Mac to continue working.
-- Identify and clone missing repositories.
-- Fetch remote updates and show what changed.
-- Safely fast-forward repositories when possible.
-- Flag local changes and diverged branches for attention.
-- Help locate and check out the branch used on the previous Mac.
-- Offer to open a project after it is ready.
+Folders to skip while scanning:
 
-## GitHub Accounts
+```sh
+homerun ignore add node_modules Pods
+homerun ignore rm Pods
+homerun ignore list
+```
 
-- Retry failed push authentication using other available GitHub accounts.
-- Restore the previously active account after retries.
-- Show account-switching progress and authentication failures.
-- Associate repositories with a preferred GitHub account.
-- Check account access before syncing.
+Config-wide settings and tidying up:
 
+```sh
+homerun config main true            # allow main and master for the current repository
+homerun config wip-name PARKED      # default WIP commit prefix
+homerun clean --missing             # forget repositories whose path has gone
+homerun clean --duplicates          # keep one entry per repository
+homerun clean --all --yes           # forget everything, no prompt
+```
 
-## Cleaner Screen
-- Show Size taken by Derived Data
-- Show size taken by SDKs
-- Delete Apple development SDKs
-- Derived Data (from default, project or custom path)
+Configuration lives in `~/.config/homerun/config.json`.
 
-## Settings Screen
+## The macOS app
 
-### Settings — Today
-- Choose the default repository status filter.
-- Choose whether to show repositories that are clean and fully synced.
+A SwiftUI app built around the same job, with the state the CLI cannot show you
+between runs. It opens on **Today** and has **Repositories**, **GitHub
+Accounts**, **Cleaner** and **Settings** beside it.
 
-### Settings — Repos
-- Require confirmation before syncing, with an option to skip confirmation.
-- Set the app-wide WIP commit prefix, falling back to WIP.
-- Set the default repository list sort order.
+**Today** is the dashboard: what has work only on this Mac, what has a sync
+problem, what is genuinely ready to resume, and what is not cloned here. You can
+review and sync everything from one place.
 
-### Settings — Repository Discovery
-- Manage folder names excluded from recursive discovery.
-- Always respect .gitignore during recursive discovery.
-- Preserve existing per-repository settings when rediscovering repositories.
+**Repositories** lists what is tracked with each one's branch, local changes and
+ahead/behind counts, filterable by dirty, clean, ahead, behind or failed. Add one
+with the folder picker or by dropping it on the window; drop a folder that is not
+itself a repository and it offers to search inside it. The detail pane shows the
+working tree, recent commits, and per-repository settings.
 
-### Settings — Repository Settings
-- Allow or prevent syncing main and master branches per repository.
-- Override the app-wide WIP commit prefix per repository.
-- Remove individual repositories from tracking without deleting files.
-- Provide maintenance actions to remove missing entries and duplicates.
-- Provide an action to clear all tracked repository configuration.
-- Always confirm destructive configuration changes.
+**Syncing** makes a timestamped WIP commit from tracked changes, including
+deletions, and pushes the current branch. Untracked files are listed but never
+committed unless you tick them, and ignored files are never touched. It shows
+the plan before it does anything, unless you turn confirmation off. A diverged
+branch is reported, never force-pushed; other branches, unpushed tags and
+submodule changes are reported rather than acted on.
 
-### Settings — GitHub Accounts
-- Choose a preferred GitHub account per repository.
-- Enable or disable fallback to other available accounts after push authentication failures.
-- Enable or disable account-access checks before syncing.
-- Always restore the previously active account after fallback attempts.
-- Show available accounts and their authentication status.
+**Readiness checks** separate "the current branch is pushed" from "this project
+could actually be picked up elsewhere", and explain each thing in the way: local
+only branches, unpushed tags, submodules needing attention, missing setup
+instructions, missing configuration templates, and the environment variables the
+other Mac will need. Variable names travel, values never do.
 
-### Settings — Resume
-- Choose whether safe fast-forward updates are preselected in the preparation plan.
-- Choose whether to offer to open a project after preparation succeeds.
-- Set the preferred application for opening projects.
-- Always flag local changes and diverged branches before updating.
+**Portable workspace** writes the shared parts — repository URLs, preferred
+relative paths, setup requirements — to a versioned JSON manifest. Load it on
+another Mac, preview what it would clone, and apply it. Each Mac keeps its own
+workspace root, so the layout does not have to match.
 
-### Settings — Portable Workspace
-- Select the versioned workspace manifest to use.
-- Set this Mac's workspace root for cloning repositories.
-- Configure preferred relative paths for repositories.
-- Keep machine-specific paths and preferences local.
-- Provide actions to load a manifest and preview workspace changes.
+**Resume** prepares a Mac to continue: clone what is missing, fast-forward what
+is safe, check out the branch the previous Mac was left on, and flag anything
+with local changes or divergence instead of touching it.
 
-### Settings — Readiness Checks
-- Configure required environment variable names per repository.
-- Configure expected local configuration templates per repository.
-- Set the location of setup instructions per repository.
-- Always surface untracked files, local-only branches, unpushed tags, and submodule changes.
-- Store requirements and template references without copying secrets.
+**GitHub Accounts** lists the accounts `gh` is signed in to, lets a repository
+prefer one, and can retry a refused push with the others — always putting the
+account that was active back afterwards, including when every retry failed. It
+says so plainly when a repository pushes over SSH, where switching accounts
+changes nothing.
 
-### Settings — Cleaner
-- Select Apple development SDK locations to inspect.
-- Include or exclude the default Derived Data location.
-- Manage project-specific and custom Derived Data paths.
-- Choose the default cleanup categories shown in the review.
-- Always show the exact items and estimated space recovered before deletion.
-- Always require confirmation before deleting SDKs or Derived Data.
+**Cleaner** shows what simulator runtimes and Derived Data are costing you and
+removes what you select. It refuses anything inside an Xcode installation, the
+command line tools or the shared SDK folder.
 
-## Settings — Menu Bar
-- Show or hide the menu bar item.
-- Choose whether the menu bar displays a count of repositories with local-only work.
-- Choose whether closing the main window keeps homerun running in the menu bar.
+A menu bar item carries the status, how many repositories have work only on this
+Mac, and quick access to review, sync and resume.
 
+`git` is required. `gh` is optional: without it ordinary git sync still works
+through your existing git authentication, and only the account features are
+withheld.
 
-## Menu Bar
-- Show an at-a-glance sync and readiness status.
-- Display how many repositories have work only on this Mac.
-- Provide quick access to review, sync, and resume.
-- Surface sync failures and required actions.
-- Open the full app for detailed review.
+## Repository layout
+
+```
+cli/         the homerun command line tool, a Swift package
+desktop/     the macOS app, an Xcode project
+docs/        architecture templates and planning notes
+impliment.yaml  the V1 specification the macOS app was built against
+```
+
+## Building and testing
+
+The command line tool:
+
+```sh
+cd cli
+swift build
+swift test
+```
+
+The macOS app:
+
+```sh
+cd desktop
+xcodebuild -project homerun-app.xcodeproj -scheme homerun-app -destination 'platform=macOS' build
+xcodebuild -project homerun-app.xcodeproj -scheme homerun-app -destination 'platform=macOS' test
+```
+
+The app needs Xcode 26 or newer. There are no UI tests by design; the behaviour
+lives in the domain, data and service layers and is tested there, including a
+set of tests that drive real `git` against a repository and bare remote created
+in a temporary folder.
+
+## Architecture
+
+[`docs/architecture.md`](docs/architecture.md) describes how the macOS app is put
+together and why — the layers, the protocol seams, the two stores, and the
+constraints that are deliberate.
+
+Read [`docs/templates/README.md`](docs/templates/README.md) before adding to the
+macOS app. It is the contract the code follows, not a suggestion: layers run
+Domain ← Data ← Services ← Presentation, state lives in `@MainActor @Observable`
+services rather than view models, each service exposes one derived `loadState`
+the views switch on exhaustively, decisions a view makes are pure use cases that
+can be tested without launching the app, and concurrency is Swift Concurrency
+only.
+
+Shared workspace membership and app preferences are held in SwiftData. Anything
+specific to one machine — absolute paths, which repositories are cloned here,
+tool locations, the workspace root, the menu bar preference — is kept in
+`UserDefaults` so it never travels.
+
+## Known gaps
+
+A few things are deliberate, or known and not yet done:
+
+- **iCloud sync is written but switched off.** The SwiftData models are
+  CloudKit-safe and the container asks for a private database when the
+  `HRCloudKitContainerIdentifier` Info.plist key is present. The key is unset,
+  because turning it on needs a development team and a registered iCloud
+  container. Until then the app uses a local store.
+- **The app sandbox is off.** It shells out to `git`, `gh`, `osascript` and
+  `xcrun`, and reads repositories anywhere on disk, which a sandboxed app cannot
+  do.
+- **CI does not currently run.** Both GitHub workflows call `swift build` and
+  `swift test` from the repository root, where there is no `Package.swift` since
+  the tool moved into `cli/`. They need a `working-directory: cli`.
+- **The app loads repositories one at a time** when it starts. Adding and
+  removing are immediate, but the initial read will get slower as the list
+  grows.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
