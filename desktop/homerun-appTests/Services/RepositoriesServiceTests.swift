@@ -162,7 +162,7 @@ struct RepositoriesServiceTests {
         let directory = await harness.addRepository("a", name: "app", snapshot: RepositoryFixtures.snapshot())
         await harness.repositories.start()
 
-        await harness.repositories.removeFromSharedWorkspace(identifier: "a")
+        harness.repositories.removeFromSharedWorkspace(identifier: "a")
 
         #expect(harness.sharedStore.removedIdentifiers == ["a"])
         #expect(harness.localStore.settings.repositoryPaths["a"] == nil)
@@ -224,6 +224,21 @@ struct RepositoriesServiceTests {
         #expect(harness.repositories.repositories.count == 2)
     }
 
+    @Test("removing takes the row out without re-reading the repositories that remain")
+    @MainActor
+    func removesWithoutRereadingTheRest() async {
+        let harness = ServiceHarness()
+        await harness.addRepository("a", name: "going", snapshot: RepositoryFixtures.snapshot())
+        await harness.addRepository("b", name: "staying", snapshot: RepositoryFixtures.snapshot())
+        await harness.repositories.start()
+        let snapshotsBefore = await harness.gitClient.calls.count(where: { $0 == "snapshot" })
+
+        harness.repositories.removeFromSharedWorkspace(identifier: "a")
+
+        #expect(harness.repositories.repositories.map(\.name) == ["staying"])
+        #expect(await harness.gitClient.calls.count(where: { $0 == "snapshot" }) == snapshotsBefore)
+    }
+
     @Test("removing this Mac's path leaves the shared workspace entry in place")
     @MainActor
     func removesLocalPathOnly() async {
@@ -231,7 +246,7 @@ struct RepositoriesServiceTests {
         await harness.addRepository("a", name: "app", snapshot: RepositoryFixtures.snapshot())
         await harness.repositories.start()
 
-        await harness.repositories.removeLocalPathMapping(identifier: "a")
+        harness.repositories.removeLocalPathMapping(identifier: "a")
 
         #expect(harness.sharedStore.repositories.count == 1)
         #expect(harness.repositories.repositories.first?.status == .notCloned)
@@ -244,7 +259,7 @@ struct RepositoriesServiceTests {
         await harness.addRepository("a", name: "app", snapshot: RepositoryFixtures.snapshot())
         harness.settings.recordLocalPath(URL(filePath: "/nowhere/gone"), for: "b")
 
-        let stale = await harness.repositories.removeStaleLocalPathMappings()
+        let stale = harness.repositories.removeStaleLocalPathMappings()
 
         #expect(stale == ["b"])
         #expect(harness.localStore.settings.repositoryPaths["a"] != nil)
@@ -257,7 +272,7 @@ struct RepositoriesServiceTests {
         harness.addUnclonedRepository("a", name: "app")
         harness.sharedStore.repositories.append(RepositoryFixtures.shared("a", name: "app"))
 
-        let removed = await harness.repositories.removeDuplicateEntries()
+        let removed = harness.repositories.removeDuplicateEntries()
 
         #expect(removed == ["a"])
         #expect(harness.sharedStore.repositories.count == 1)
@@ -269,7 +284,7 @@ struct RepositoriesServiceTests {
         let harness = ServiceHarness()
         await harness.addRepository("a", name: "app", snapshot: RepositoryFixtures.snapshot())
 
-        await harness.repositories.clearTrackedConfiguration(scope: .local)
+        harness.repositories.clearTrackedConfiguration(scope: .local)
 
         #expect(harness.localStore.settings.repositoryPaths.isEmpty)
         #expect(harness.sharedStore.repositories.count == 1)
@@ -282,7 +297,7 @@ struct RepositoriesServiceTests {
         let harness = ServiceHarness()
         await harness.addRepository("a", name: "app", snapshot: RepositoryFixtures.snapshot())
 
-        await harness.repositories.clearTrackedConfiguration(scope: .shared)
+        harness.repositories.clearTrackedConfiguration(scope: .shared)
 
         #expect(harness.sharedStore.repositories.isEmpty)
         #expect(harness.localStore.settings.repositoryPaths.isEmpty)

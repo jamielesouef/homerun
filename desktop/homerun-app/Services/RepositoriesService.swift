@@ -167,22 +167,23 @@ final class RepositoriesService: SingleFlightRefreshing {
 
     // MARK: - Maintenance
 
-    func removeFromSharedWorkspace(identifier: String) async {
+    func removeFromSharedWorkspace(identifier: String) {
         store { () throws(PersistenceError) in
             try sharedStore.remove(identifier: identifier)
         }
         settings.removeLocalPath(for: identifier)
+        repositories.removeAll { $0.id == identifier }
         lastMaintenanceMessage = String(localized: "Removed from the shared workspace. No files were deleted.")
-        await refresh()
     }
 
-    func removeLocalPathMapping(identifier: String) async {
+    func removeLocalPathMapping(identifier: String) {
         settings.removeLocalPath(for: identifier)
+        forgetLocalCheckout(of: [identifier])
         lastMaintenanceMessage = String(localized: "Removed this Mac's path. The shared workspace entry is unchanged.")
-        await refresh()
     }
 
-    func removeStaleLocalPathMappings() async -> [String] {
+    @discardableResult
+    func removeStaleLocalPathMappings() -> [String] {
         let stale = RepositoryMaintenanceUseCase.staleLocalPathIdentifiers(
             repositoryPaths: settings.localSettings.repositoryPaths
         ) { [fileManager] path in
@@ -193,36 +194,41 @@ final class RepositoriesService: SingleFlightRefreshing {
             settings.removeLocalPath(for: identifier)
         }
 
+        forgetLocalCheckout(of: Set(stale))
         lastMaintenanceMessage = String(localized: "Removed \(stale.count) stale path(s) on this Mac.")
-        await refresh()
 
         return stale
     }
 
-    func removeDuplicateEntries() async -> [String] {
+    @discardableResult
+    func removeDuplicateEntries() -> [String] {
         var removed: [String] = []
+
         store { () throws(PersistenceError) in
             removed = try sharedStore.removeDuplicates()
         }
+
+        var seen: Set<String> = []
+        repositories = repositories.filter { seen.insert($0.id).inserted }
         lastMaintenanceMessage = String(localized: "Removed \(removed.count) duplicate entry(s).")
-        await refresh()
 
         return removed
     }
 
-    func clearTrackedConfiguration(scope: ConfigurationScope) async {
+    func clearTrackedConfiguration(scope: ConfigurationScope) {
         switch scope {
         case .local:
             settings.updateLocalSettings { $0.repositoryPaths = [:] }
+            forgetLocalCheckout(of: Set(repositories.map(\.id)))
         case .shared:
             store { () throws(PersistenceError) in
-            try sharedStore.removeAllRepositories()
-        }
+                try sharedStore.removeAllRepositories()
+            }
             settings.updateLocalSettings { $0.repositoryPaths = [:] }
+            repositories = []
         }
 
         lastMaintenanceMessage = scope.explanation
-        await refresh()
     }
 
     func clearMaintenanceMessage() {
@@ -323,6 +329,16 @@ final class RepositoriesService: SingleFlightRefreshing {
         }
 
         return loaded
+    }
+
+    private func forgetLocalCheckout(of identifiers: Set<String>) {
+        repositories = repositories.map { repository in
+            guard identifiers.contains(repository.id) else {
+                return repository
+            }
+
+            return TrackedRepository(shared: repository.shared, lastSyncOutcome: repository.lastSyncOutcome)
+        }
     }
 
     private func showWhileReading(_ added: [(shared: WorkspaceRepository, directory: URL)]) {

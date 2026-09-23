@@ -20,7 +20,6 @@ struct RepositoriesScreen: View {
     @State private var selection: String?
     @State private var discovered: [DiscoveredRepository] = []
     @State private var pendingRemoval: RepositoryRemoval?
-    @State private var isDropTargeted = false
 
     // MARK: - View
 
@@ -38,20 +37,6 @@ struct RepositoriesScreen: View {
                 idealWidth: Constants.listIdealWidth,
                 maxWidth: Constants.listMaximumWidth
             )
-            .overlay {
-                if isDropTargeted {
-                    RepositoryDropTargetView()
-                }
-            }
-            .animation(.snappy, value: isDropTargeted)
-            .dropDestination(for: URL.self) { urls, _ in
-                isDropTargeted = false
-                addRepositories(at: urls)
-
-                return true
-            } isTargeted: { isTargeted in
-                isDropTargeted = isTargeted
-            }
 
             Divider()
 
@@ -106,9 +91,7 @@ struct RepositoriesScreen: View {
                 title: Text(removal.title),
                 message: Text(removal.explanation),
                 primaryButton: .destructive(Text(String(localized: "Remove"))) {
-                    Task {
-                        await perform(removal)
-                    }
+                    perform(removal)
                 },
                 secondaryButton: .cancel()
             )
@@ -252,28 +235,16 @@ struct RepositoriesScreen: View {
         }
     }
 
-    private func addRepositories(at urls: [URL]) {
-        guard urls.isEmpty == false else {
-            return
-        }
-
-        Task {
-            for url in urls {
-                _ = await repositories.addRepository(at: url)
-            }
-        }
-    }
-
-    private func perform(_ removal: RepositoryRemoval) async {
+    private func perform(_ removal: RepositoryRemoval) {
         if selection == removal.identifier {
             selection = nil
         }
 
         switch removal.scope {
         case .local:
-            await repositories.removeLocalPathMapping(identifier: removal.identifier)
+            repositories.removeLocalPathMapping(identifier: removal.identifier)
         case .shared:
-            await repositories.removeFromSharedWorkspace(identifier: removal.identifier)
+            repositories.removeFromSharedWorkspace(identifier: removal.identifier)
         }
     }
 }

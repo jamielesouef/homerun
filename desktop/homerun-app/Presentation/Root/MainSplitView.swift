@@ -16,33 +16,54 @@ struct MainSplitView: View {
     // MARK: - State
 
     @State private var section: AppSection = .today
+    @State private var isDropTargeted = false
 
     // MARK: - View
 
     var body: some View {
         NavigationSplitView {
-            VStack(spacing: 0) {
-                List(AppSection.allCases, selection: $section) { item in
-                    NavigationLink(value: item) {
-                        Label(item.title, systemImage: item.symbolName)
-                    }
-                }
-
-                #if DEBUG
-                Divider()
-
-                DebugMenuView()
-                #endif
-            }
-            .navigationSplitViewColumnWidth(min: Constants.sidebarMinimum, ideal: Constants.sidebarIdeal)
+            sidebar
         } detail: {
             detail
                 .frame(minWidth: Constants.detailMinimum)
                 .navigationTitle(section.title)
+                .overlay {
+                    if isDropTargeted {
+                        RepositoryDropTargetView()
+                    }
+                }
+                .animation(.snappy, value: isDropTargeted)
+                .dropDestination(for: URL.self) { urls, _ in
+                    isDropTargeted = false
+                    addRepositories(at: urls)
+
+                    return true
+                } isTargeted: { isTargeted in
+                    isDropTargeted = isTargeted
+                }
         }
         .task {
             await repositories.start()
         }
+    }
+
+    // MARK: - Sidebar
+
+    private var sidebar: some View {
+        VStack(spacing: 0) {
+            List(AppSection.allCases, selection: $section) { item in
+                NavigationLink(value: item) {
+                    Label(item.title, systemImage: item.symbolName)
+                }
+            }
+
+            #if DEBUG
+            Divider()
+
+            DebugMenuView()
+            #endif
+        }
+        .navigationSplitViewColumnWidth(min: Constants.sidebarMinimum, ideal: Constants.sidebarIdeal)
     }
 
     // MARK: - Detail
@@ -60,6 +81,22 @@ struct MainSplitView: View {
             CleanerScreen()
         case .settings:
             SettingsScreen()
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func addRepositories(at urls: [URL]) {
+        guard urls.isEmpty == false else {
+            return
+        }
+
+        section = .repositories
+
+        Task {
+            for url in urls {
+                _ = await repositories.addRepository(at: url)
+            }
         }
     }
 }

@@ -14,15 +14,11 @@ struct RepositoryMaintenanceSection: View {
     var body: some View {
         Section(String(localized: "Repository maintenance")) {
             Button(String(localized: "Remove stale paths on this Mac")) {
-                Task {
-                    _ = await repositories.removeStaleLocalPathMappings()
-                }
+                repositories.removeStaleLocalPathMappings()
             }
 
             Button(String(localized: "Remove duplicate entries")) {
-                Task {
-                    _ = await repositories.removeDuplicateEntries()
-                }
+                repositories.removeDuplicateEntries()
             }
 
             ForEach(ConfigurationScope.allCases) { scope in
@@ -43,9 +39,7 @@ struct RepositoryMaintenanceSection: View {
                 title: Text(String(localized: "Clear tracked repositories?")),
                 message: Text(scope.explanation),
                 primaryButton: .destructive(Text(String(localized: "Clear"))) {
-                    Task {
-                        await repositories.clearTrackedConfiguration(scope: scope)
-                    }
+                    repositories.clearTrackedConfiguration(scope: scope)
                 },
                 secondaryButton: .cancel()
             )
