@@ -135,7 +135,9 @@ struct RepositoriesScreen: View {
     }
 
     private var loadedList: some View {
-        List(repositories.visibleRepositories, selection: $selection) { repository in
+        let visible = repositories.visibleRepositories
+
+        return List(visible, selection: $selection) { repository in
             RepositoryRowView(repository: repository)
                 .contextMenu {
                     Button(String(localized: "Sync")) {
@@ -155,6 +157,7 @@ struct RepositoriesScreen: View {
                     }
                 }
         }
+        .animation(.snappy, value: visible.map(\.id))
     }
 
     // MARK: - Bottom bar
