@@ -13,4 +13,5 @@ extension EnvironmentValues {
     @Entry var workspaceService: WorkspaceService = defaultAppGraph.workspace
     @Entry var accountsService: GitHubAccountsService = defaultAppGraph.accounts
     @Entry var cleanerService: CleanerService = defaultAppGraph.cleaner
+    @Entry var filePanel: any FilePanelPresenting = defaultAppGraph.filePanel
 }

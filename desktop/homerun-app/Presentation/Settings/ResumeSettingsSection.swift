@@ -5,10 +5,7 @@ struct ResumeSettingsSection: View {
     // MARK: - Environment
 
     @Environment(\.settingsService) private var settings
-
-    // MARK: - State
-
-    @State private var isChoosingApplication = false
+    @Environment(\.filePanel) private var filePanel
 
     // MARK: - View
 
@@ -25,9 +22,7 @@ struct ResumeSettingsSection: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
 
-                    Button(String(localized: "Choose…")) {
-                        isChoosingApplication = true
-                    }
+                    Button(String(localized: "Choose…"), action: chooseApplication)
 
                     if settings.localSettings.preferredOpenApplicationPath != nil {
                         Button(String(localized: "Clear")) {
@@ -37,13 +32,17 @@ struct ResumeSettingsSection: View {
                 }
             }
         }
-        .fileImporter(isPresented: $isChoosingApplication, allowedContentTypes: [.application]) { result in
-            guard case .success(let url) = result else {
-                return
-            }
+    }
 
-            settings.updateLocalSettings { $0.preferredOpenApplicationPath = url.path(percentEncoded: false) }
+    private func chooseApplication() {
+        guard let url = filePanel.chooseFile(
+            message: String(localized: "Choose the application to open projects with"),
+            contentTypes: [.application]
+        ) else {
+            return
         }
+
+        settings.updateLocalSettings { $0.preferredOpenApplicationPath = url.path(percentEncoded: false) }
     }
 
     // MARK: - Helpers

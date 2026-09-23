@@ -6,10 +6,7 @@ struct CleanerSettingsSection: View {
 
     @Environment(\.settingsService) private var settings
     @Environment(\.cleanerService) private var cleaner
-
-    // MARK: - State
-
-    @State private var isChoosingPath = false
+    @Environment(\.filePanel) private var filePanel
 
     // MARK: - View
 
@@ -22,9 +19,7 @@ struct CleanerSettingsSection: View {
             }
 
             LabeledContent(String(localized: "Extra Derived Data paths")) {
-                Button(String(localized: "Add…")) {
-                    isChoosingPath = true
-                }
+                Button(String(localized: "Add…"), action: addDerivedDataPath)
             }
 
             ForEach(settings.localSettings.additionalDerivedDataPaths, id: \.self) { path in
@@ -46,20 +41,23 @@ struct CleanerSettingsSection: View {
                 }
             }
         }
-        .fileImporter(isPresented: $isChoosingPath, allowedContentTypes: [.folder]) { result in
-            guard case .success(let url) = result else {
+    }
+
+    private func addDerivedDataPath() {
+        guard let url = filePanel.chooseFolder(
+            message: String(localized: "Choose a Derived Data folder to include")
+        ) else {
+            return
+        }
+
+        settings.updateLocalSettings { local in
+            let path = url.path(percentEncoded: false)
+
+            guard local.additionalDerivedDataPaths.contains(path) == false else {
                 return
             }
 
-            settings.updateLocalSettings { local in
-                let path = url.path(percentEncoded: false)
-
-                guard local.additionalDerivedDataPaths.contains(path) == false else {
-                    return
-                }
-
-                local.additionalDerivedDataPaths.append(path)
-            }
+            local.additionalDerivedDataPaths.append(path)
         }
     }
 

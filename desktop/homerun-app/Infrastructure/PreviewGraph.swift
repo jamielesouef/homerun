@@ -88,7 +88,8 @@ enum PreviewGraph {
                 derivedDataProvider: MockDerivedDataProvider(),
                 repositories: repositoriesService,
                 settings: settings
-            )
+            ),
+            filePanel: MockFilePanelPresenter()
         )
     }
 

@@ -80,7 +80,8 @@ enum AppDependencies {
                 ),
                 repositories: repositories,
                 settings: settings
-            )
+            ),
+            filePanel: AppKitFilePanelPresenter()
         )
     }
 

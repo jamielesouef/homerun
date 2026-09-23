@@ -12,6 +12,7 @@ final class AppGraph {
     let workspace: WorkspaceService
     let accounts: GitHubAccountsService
     let cleaner: CleanerService
+    let filePanel: any FilePanelPresenting
 
     // MARK: - Init
 
@@ -23,7 +24,8 @@ final class AppGraph {
         resume: ResumeService,
         workspace: WorkspaceService,
         accounts: GitHubAccountsService,
-        cleaner: CleanerService
+        cleaner: CleanerService,
+        filePanel: any FilePanelPresenting
     ) {
         self.settings = settings
         self.onboarding = onboarding
@@ -33,5 +35,6 @@ final class AppGraph {
         self.workspace = workspace
         self.accounts = accounts
         self.cleaner = cleaner
+        self.filePanel = filePanel
     }
 }

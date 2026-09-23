@@ -1,5 +1,6 @@
 #if DEBUG
 import Foundation
+import UniformTypeIdentifiers
 
 struct MockGitClient: GitClienting {
     var snapshotsByPath: [String: GitRepositorySnapshot] = [:]
@@ -255,6 +256,25 @@ final class MockSharedWorkspaceStore: SharedWorkspaceStoring {
 
     func save(_ preferences: AppPreferences) throws(PersistenceError) {
         storedPreferences = preferences
+    }
+}
+
+@MainActor
+final class MockFilePanelPresenter: FilePanelPresenting {
+    var folder: URL?
+    var file: URL?
+    var saveLocation: URL?
+
+    func chooseFolder(message: String) -> URL? {
+        folder
+    }
+
+    func chooseFile(message: String, contentTypes: [UTType]) -> URL? {
+        file
+    }
+
+    func chooseSaveLocation(message: String, suggestedName: String, contentType: UTType) -> URL? {
+        saveLocation
     }
 }
 

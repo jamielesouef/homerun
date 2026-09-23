@@ -7,13 +7,7 @@ struct PortableWorkspaceSettingsSection: View {
     @Environment(\.settingsService) private var settings
     @Environment(\.workspaceService) private var workspace
     @Environment(\.repositoriesService) private var repositories
-
-    // MARK: - State
-
-    @State private var isChoosingManifest = false
-    @State private var isChoosingRoot = false
-    @State private var isExportingManifest = false
-    @State private var manifestName = "Workspace"
+    @Environment(\.filePanel) private var filePanel
 
     // MARK: - View
 
@@ -26,9 +20,7 @@ struct PortableWorkspaceSettingsSection: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
 
-                    Button(String(localized: "Choose…")) {
-                        isChoosingRoot = true
-                    }
+                    Button(String(localized: "Choose…"), action: chooseWorkspaceRoot)
                 }
             }
 
@@ -39,48 +31,14 @@ struct PortableWorkspaceSettingsSection: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
 
-                    Button(String(localized: "Load…")) {
-                        isChoosingManifest = true
-                    }
+                    Button(String(localized: "Load…"), action: loadManifest)
 
-                    Button(String(localized: "Write…")) {
-                        isExportingManifest = true
-                    }
+                    Button(String(localized: "Write…"), action: writeManifest)
                 }
             }
 
             preview
             relativePaths
-        }
-        .fileImporter(isPresented: $isChoosingRoot, allowedContentTypes: [.folder]) { result in
-            guard case .success(let url) = result else {
-                return
-            }
-
-            workspace.setWorkspaceRoot(url)
-        }
-        .fileImporter(isPresented: $isChoosingManifest, allowedContentTypes: [.json]) { result in
-            guard case .success(let url) = result else {
-                return
-            }
-
-            Task {
-                await workspace.loadManifest(at: url)
-            }
-        }
-        .fileExporter(
-            isPresented: $isExportingManifest,
-            document: WorkspaceManifestDocument(),
-            contentType: .json,
-            defaultFilename: "homerun-workspace"
-        ) { result in
-            guard case .success(let url) = result else {
-                return
-            }
-
-            Task {
-                await workspace.exportManifest(named: manifestName, to: url)
-            }
         }
     }
 
@@ -153,6 +111,43 @@ struct PortableWorkspaceSettingsSection: View {
     }
 
     // MARK: - Helpers
+
+    private func chooseWorkspaceRoot() {
+        guard let url = filePanel.chooseFolder(
+            message: String(localized: "Choose where this Mac clones repositories")
+        ) else {
+            return
+        }
+
+        workspace.setWorkspaceRoot(url)
+    }
+
+    private func loadManifest() {
+        guard let url = filePanel.chooseFile(
+            message: String(localized: "Choose a workspace manifest"),
+            contentTypes: [.json]
+        ) else {
+            return
+        }
+
+        Task {
+            await workspace.loadManifest(at: url)
+        }
+    }
+
+    private func writeManifest() {
+        guard let url = filePanel.chooseSaveLocation(
+            message: String(localized: "Write the shared workspace to a manifest"),
+            suggestedName: "homerun-workspace.json",
+            contentType: .json
+        ) else {
+            return
+        }
+
+        Task {
+            await workspace.exportManifest(named: url.deletingPathExtension().lastPathComponent, to: url)
+        }
+    }
 
     private func relativePathBinding(for repository: TrackedRepository) -> Binding<String> {
         Binding(
