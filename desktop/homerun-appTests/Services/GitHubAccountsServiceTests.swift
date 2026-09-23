@@ -93,7 +93,7 @@ struct GitHubAccountsServiceTests {
             return
         }
 
-        await service.associate("acme-bot", with: repository)
+        service.associate("acme-bot", with: repository)
 
         #expect(harness.sharedStore.repositories.first?.preferredGitHubAccount == "acme-bot")
     }

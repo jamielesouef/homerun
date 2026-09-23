@@ -153,9 +153,7 @@ struct PortableWorkspaceSettingsSection: View {
         Binding(
             get: { repository.shared.preferredRelativePath },
             set: { value in
-                Task {
-                    await workspace.setPreferredRelativePath(value, for: repository.id)
-                }
+                workspace.setPreferredRelativePath(value, for: repository.id)
             }
         )
     }

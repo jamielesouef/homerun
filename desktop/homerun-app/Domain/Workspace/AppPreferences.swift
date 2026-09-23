@@ -5,6 +5,7 @@ struct AppPreferences: Equatable, Codable {
     var showsCleanRepositories: Bool
     var requiresSyncConfirmation: Bool
     var wipCommitPrefix: String
+    var appendsTimestampToWIPCommit: Bool
     var repositorySortOrder: RepositorySortOrder
     var ignoredFolderNames: [String]
     var accountFallbackEnabled: Bool
@@ -30,6 +31,7 @@ struct AppPreferences: Equatable, Codable {
         showsCleanRepositories: true,
         requiresSyncConfirmation: true,
         wipCommitPrefix: fallbackWIPCommitPrefix,
+        appendsTimestampToWIPCommit: true,
         repositorySortOrder: .name,
         ignoredFolderNames: defaultIgnoredFolderNames,
         accountFallbackEnabled: true,

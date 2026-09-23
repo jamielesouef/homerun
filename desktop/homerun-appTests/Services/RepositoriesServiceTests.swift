@@ -191,6 +191,28 @@ struct RepositoriesServiceTests {
         #expect(harness.sharedStore.repositories.first?.wipCommitPrefixOverride == "SCRATCH")
     }
 
+    @Test("publishes a changed setting straight away, keeping the snapshot it already had")
+    @MainActor
+    func publishesChangedSettingImmediately() async {
+        let harness = ServiceHarness()
+        await harness.addRepository("a", name: "app", snapshot: RepositoryFixtures.snapshot(ahead: 2))
+        await harness.repositories.start()
+        let snapshotsBefore = await harness.gitClient.calls.count(where: { $0 == "snapshot" })
+
+        guard var shared = harness.repositories.repositories.first?.shared else {
+            Issue.record("expected a repository")
+            return
+        }
+
+        shared.allowsMainBranchSync = true
+        harness.repositories.update(shared)
+
+        #expect(harness.repositories.repositories.first?.shared.allowsMainBranchSync == true)
+        #expect(harness.repositories.repositories.first?.status == .ahead)
+        #expect(await harness.gitClient.calls.count(where: { $0 == "snapshot" }) == snapshotsBefore)
+        #expect(harness.sharedStore.repositories.first?.allowsMainBranchSync == true)
+    }
+
     // MARK: - Maintenance
 
     @Test("removing a shared entry deletes no files and clears this Mac's path")

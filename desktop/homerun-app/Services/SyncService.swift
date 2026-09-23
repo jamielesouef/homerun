@@ -197,7 +197,8 @@ final class SyncService {
                 repositoryOverride: repository.shared.wipCommitPrefixOverride,
                 appWide: settings.preferences.wipCommitPrefix,
                 timestamp: clock.now(),
-                timeZone: clock.timeZone
+                timeZone: clock.timeZone,
+                appendsTimestamp: settings.preferences.appendsTimestampToWIPCommit
             ),
             preferredAccount: repository.shared.preferredGitHubAccount,
             checksAccountAccess: settings.preferences.accountAccessChecksEnabled,

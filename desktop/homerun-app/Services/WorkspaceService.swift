@@ -88,13 +88,13 @@ final class WorkspaceService {
         refreshPreview()
     }
 
-    func setPreferredRelativePath(_ path: String, for identifier: String) async {
+    func setPreferredRelativePath(_ path: String, for identifier: String) {
         guard var repository = try? sharedStore.repository(identifier: identifier) else {
             return
         }
 
         repository.preferredRelativePath = path
-        await repositories.update(repository)
+        repositories.update(repository)
         refreshPreview()
     }
 

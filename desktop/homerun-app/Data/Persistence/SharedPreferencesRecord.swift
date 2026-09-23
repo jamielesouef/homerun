@@ -7,6 +7,7 @@ final class SharedPreferencesRecord {
     var showsCleanRepositories: Bool = true
     var requiresSyncConfirmation: Bool = true
     var wipCommitPrefix: String = AppPreferences.fallbackWIPCommitPrefix
+    var appendsTimestampToWIPCommit: Bool = true
     var repositorySortOrderRaw: String = RepositorySortOrder.name.rawValue
     var ignoredFolderNames: [String] = AppPreferences.defaultIgnoredFolderNames
     var accountFallbackEnabled: Bool = true
@@ -25,6 +26,7 @@ final class SharedPreferencesRecord {
             showsCleanRepositories: showsCleanRepositories,
             requiresSyncConfirmation: requiresSyncConfirmation,
             wipCommitPrefix: wipCommitPrefix,
+            appendsTimestampToWIPCommit: appendsTimestampToWIPCommit,
             repositorySortOrder: RepositorySortOrder(rawValue: repositorySortOrderRaw) ?? .name,
             ignoredFolderNames: ignoredFolderNames,
             accountFallbackEnabled: accountFallbackEnabled,
@@ -40,6 +42,7 @@ final class SharedPreferencesRecord {
         showsCleanRepositories = preferences.showsCleanRepositories
         requiresSyncConfirmation = preferences.requiresSyncConfirmation
         wipCommitPrefix = preferences.wipCommitPrefix
+        appendsTimestampToWIPCommit = preferences.appendsTimestampToWIPCommit
         repositorySortOrderRaw = preferences.repositorySortOrder.rawValue
         ignoredFolderNames = preferences.ignoredFolderNames
         accountFallbackEnabled = preferences.accountFallbackEnabled

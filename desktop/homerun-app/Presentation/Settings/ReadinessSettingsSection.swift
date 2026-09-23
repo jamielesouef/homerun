@@ -64,10 +64,7 @@ struct ReadinessSettingsSection: View {
             set: { value in
                 var shared = repository.shared
                 shared[keyPath: keyPath] = value.isEmpty ? nil : value
-
-                Task {
-                    await repositories.update(shared)
-                }
+                repositories.update(shared)
             }
         )
     }
@@ -84,10 +81,7 @@ struct ReadinessSettingsSection: View {
                     .split(separator: ",")
                     .map { $0.trimmingCharacters(in: .whitespaces) }
                     .filter { $0.isEmpty == false }
-
-                Task {
-                    await repositories.update(shared)
-                }
+                repositories.update(shared)
             }
         )
     }

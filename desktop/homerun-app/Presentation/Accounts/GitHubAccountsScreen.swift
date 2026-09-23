@@ -162,9 +162,7 @@ struct GitHubAccountsScreen: View {
         Binding(
             get: { repository.shared.preferredGitHubAccount },
             set: { login in
-                Task {
-                    await accounts.associate(login, with: repository)
-                }
+                accounts.associate(login, with: repository)
             }
         )
     }

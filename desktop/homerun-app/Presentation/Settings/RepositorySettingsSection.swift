@@ -21,6 +21,8 @@ struct RepositorySettingsSection: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
+            Toggle(String(localized: "Append the time to WIP commit messages"), isOn: timestampBinding)
+
             Picker(String(localized: "Default sort order"), selection: sortBinding) {
                 ForEach(RepositorySortOrder.allCases) { order in
                     Text(order.title).tag(order)
@@ -42,6 +44,13 @@ struct RepositorySettingsSection: View {
         Binding(
             get: { settings.preferences.wipCommitPrefix },
             set: { value in settings.updatePreferences { $0.wipCommitPrefix = value } }
+        )
+    }
+
+    private var timestampBinding: Binding<Bool> {
+        Binding(
+            get: { settings.preferences.appendsTimestampToWIPCommit },
+            set: { value in settings.updatePreferences { $0.appendsTimestampToWIPCommit = value } }
         )
     }
 

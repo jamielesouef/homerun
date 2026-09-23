@@ -13,9 +13,16 @@ enum WIPCommitMessageUseCase {
         repositoryOverride: String?,
         appWide: String?,
         timestamp: Date,
-        timeZone: TimeZone
+        timeZone: TimeZone,
+        appendsTimestamp: Bool
     ) -> String {
-        "\(prefix(repositoryOverride: repositoryOverride, appWide: appWide)) \(formatted(timestamp, timeZone: timeZone))"
+        let prefix = prefix(repositoryOverride: repositoryOverride, appWide: appWide)
+
+        guard appendsTimestamp else {
+            return prefix
+        }
+
+        return "\(prefix) \(formatted(timestamp, timeZone: timeZone))"
     }
 
     // MARK: - Helpers

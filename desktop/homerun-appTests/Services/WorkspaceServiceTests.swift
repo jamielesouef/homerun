@@ -121,7 +121,7 @@ struct WorkspaceServiceTests {
         await harness.repositories.start()
         let service = harness.makeWorkspace()
 
-        await service.setPreferredRelativePath("clients/app", for: "a")
+        service.setPreferredRelativePath("clients/app", for: "a")
 
         #expect(harness.sharedStore.repositories.first?.preferredRelativePath == "clients/app")
         #expect(harness.localStore.settings.repositoryPaths.isEmpty)

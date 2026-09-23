@@ -21,10 +21,25 @@ struct WIPCommitMessageUseCaseTests {
             repositoryOverride: nil,
             appWide: nil,
             timestamp: Date(timeIntervalSince1970: 1_758_600_000),
-            timeZone: timeZone
+            timeZone: timeZone,
+            appendsTimestamp: true
         )
 
         #expect(message == "WIP 2025-09-23 04:00:00")
+    }
+
+    @Test("leaves the timestamp off when the setting says not to append it")
+    func omitsTheTimestamp() throws {
+        let timeZone = try #require(TimeZone(identifier: "UTC"))
+        let message = WIPCommitMessageUseCase.message(
+            repositoryOverride: "SCRATCH",
+            appWide: nil,
+            timestamp: Date(timeIntervalSince1970: 1_758_600_000),
+            timeZone: timeZone,
+            appendsTimestamp: false
+        )
+
+        #expect(message == "SCRATCH")
     }
 }
 
@@ -49,6 +64,35 @@ struct BranchSyncPolicyUseCaseTests {
         let repository = RepositoryFixtures.shared(allowsMaster: true)
 
         #expect(BranchSyncPolicyUseCase.blockedReason(branch: "master", repository: repository) == nil)
+    }
+
+    @Test("offers a toggle only for the protected branch the repository actually has", arguments: [
+        ("main", ["main"]),
+        ("master", ["master"]),
+        ("trunk", [])
+    ])
+    func offersOnlyThePresentProtectedBranch(branch: String, expected: [String]) {
+        let branches = [GitBranchRef(name: branch, upstream: nil, aheadCount: 0, behindCount: 0)]
+        let snapshot = RepositoryFixtures.snapshot(branch: branch, branches: branches)
+
+        #expect(BranchSyncPolicyUseCase.protectedBranchesPresent(in: snapshot) == expected)
+    }
+
+    @Test("offers both when the repository has not been read yet")
+    func offersBothWhenUnread() {
+        #expect(BranchSyncPolicyUseCase.protectedBranchesPresent(in: nil) == ["main", "master"])
+    }
+
+    @Test("reads and writes the flag belonging to the branch it was given")
+    func readsAndWritesTheRightFlag() {
+        var repository = RepositoryFixtures.shared()
+
+        BranchSyncPolicyUseCase.setSyncAllowed(true, branch: "master", in: &repository)
+
+        #expect(repository.allowsMasterBranchSync)
+        #expect(repository.allowsMainBranchSync == false)
+        #expect(BranchSyncPolicyUseCase.isSyncAllowed(branch: "master", in: repository))
+        #expect(BranchSyncPolicyUseCase.isSyncAllowed(branch: "main", in: repository) == false)
     }
 
     @Test("never blocks an ordinary feature branch")

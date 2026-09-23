@@ -111,11 +111,24 @@ final class RepositoriesService: SingleFlightRefreshing {
         repositories.first { $0.id == identifier }
     }
 
-    func update(_ repository: WorkspaceRepository) async {
+    func update(_ repository: WorkspaceRepository) {
         store { () throws(PersistenceError) in
             try sharedStore.upsert(repository)
         }
-        await refresh()
+
+        guard let index = repositories.firstIndex(where: { $0.id == repository.identifier }) else {
+            return
+        }
+
+        let existing = repositories[index]
+        repositories[index] = TrackedRepository(
+            shared: repository,
+            localPath: existing.localPath,
+            snapshot: existing.snapshot,
+            lastSyncOutcome: existing.lastSyncOutcome,
+            readError: existing.readError,
+            isLoadingSnapshot: existing.isLoadingSnapshot
+        )
     }
 
     @discardableResult

@@ -80,10 +80,10 @@ final class GitHubAccountsService: SingleFlightRefreshing {
         await refresh()
     }
 
-    func associate(_ login: String?, with repository: TrackedRepository) async {
+    func associate(_ login: String?, with repository: TrackedRepository) {
         var shared = repository.shared
         shared.preferredGitHubAccount = login
-        await repositories.update(shared)
+        repositories.update(shared)
     }
 
     func inapplicabilityExplanation(for repository: TrackedRepository) -> String? {

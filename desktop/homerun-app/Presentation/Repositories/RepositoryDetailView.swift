@@ -34,6 +34,9 @@ struct RepositoryDetailView: View {
             diff = await repositories.diffSummary(for: repository)
             await repositories.evaluateReadiness(for: repository, checksRemoteTags: false)
         }
+        .task {
+            await accounts.start()
+        }
     }
 
     // MARK: - Header
@@ -67,8 +70,9 @@ struct RepositoryDetailView: View {
             Text(String(localized: "This repository"))
                 .font(.headline)
 
-            Toggle(String(localized: "Allow syncing main"), isOn: booleanBinding(\.allowsMainBranchSync))
-            Toggle(String(localized: "Allow syncing master"), isOn: booleanBinding(\.allowsMasterBranchSync))
+            ForEach(BranchSyncPolicyUseCase.protectedBranchesPresent(in: repository.snapshot), id: \.self) { branch in
+                Toggle(String(localized: "Allow syncing \(branch)"), isOn: branchSyncBinding(for: branch))
+            }
 
             LabeledContent(String(localized: "WIP commit prefix")) {
                 TextField(
@@ -191,16 +195,13 @@ struct RepositoryDetailView: View {
 
     // MARK: - Helpers
 
-    private func booleanBinding(_ keyPath: WritableKeyPath<WorkspaceRepository, Bool>) -> Binding<Bool> {
+    private func branchSyncBinding(for branch: String) -> Binding<Bool> {
         Binding(
-            get: { repository.shared[keyPath: keyPath] },
-            set: { newValue in
+            get: { BranchSyncPolicyUseCase.isSyncAllowed(branch: branch, in: repository.shared) },
+            set: { isAllowed in
                 var shared = repository.shared
-                shared[keyPath: keyPath] = newValue
-
-                Task {
-                    await repositories.update(shared)
-                }
+                BranchSyncPolicyUseCase.setSyncAllowed(isAllowed, branch: branch, in: &shared)
+                repositories.update(shared)
             }
         )
     }
@@ -211,10 +212,7 @@ struct RepositoryDetailView: View {
             set: { newValue in
                 var shared = repository.shared
                 shared[keyPath: keyPath] = newValue.isEmpty ? nil : newValue
-
-                Task {
-                    await repositories.update(shared)
-                }
+                repositories.update(shared)
             }
         )
     }
@@ -223,9 +221,7 @@ struct RepositoryDetailView: View {
         Binding(
             get: { repository.shared.preferredGitHubAccount },
             set: { login in
-                Task {
-                    await accounts.associate(login, with: repository)
-                }
+                accounts.associate(login, with: repository)
             }
         )
     }
