@@ -59,8 +59,13 @@ final class SyncService {
 
     // MARK: - Intent
 
-    func review(identifiers: Set<String>?) async {
-        let selected = selection(identifiers)
+    func review(identifiers: Set<String>?, includesWorktrees: Bool = true) async {
+        let selected = WorktreeUseCase.checkoutsToSync(
+            in: repositories.repositories,
+            identifiers: identifiers,
+            includesWorktrees: includesWorktrees
+        )
+
         let plan = SyncPlanUseCase.plan(for: selected, untrackedSelections: untrackedSelections)
 
         guard settings.preferences.requiresSyncConfirmation else {
@@ -134,20 +139,12 @@ final class SyncService {
 
     // MARK: - Helpers
 
-    private func selection(_ identifiers: Set<String>?) -> [TrackedRepository] {
-        guard let identifiers else {
-            return repositories.repositories
-        }
-
-        return repositories.repositories.filter { identifiers.contains($0.id) }
-    }
-
     private func refreshReview() {
         guard case let .reviewing(plan) = phase else {
             return
         }
 
-        let selected = repositories.repositories.filter { repository in
+        let selected = repositories.allCheckouts.filter { repository in
             plan.steps.contains { $0.identifier == repository.id }
         }
 
@@ -161,7 +158,7 @@ final class SyncService {
         phase = .running(SyncProgress(
             total: steps.count,
             completed: 0,
-            currentRepositoryName: steps.first?.repositoryName
+            currentRepositoryName: steps.first?.displayName
         ))
 
         for (index, step) in steps.enumerated() {
@@ -172,7 +169,7 @@ final class SyncService {
             phase = .running(SyncProgress(
                 total: steps.count,
                 completed: index,
-                currentRepositoryName: step.repositoryName
+                currentRepositoryName: step.displayName
             ))
 
             guard let request = request(for: step) else {

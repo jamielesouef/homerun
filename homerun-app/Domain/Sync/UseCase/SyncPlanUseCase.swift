@@ -26,7 +26,8 @@ enum SyncPlanUseCase {
             selectableUntrackedPaths: untracked,
             includedUntrackedPaths: included,
             outstandingBranches: snapshot?.otherBranchesNeedingPush ?? [],
-            submoduleChanges: snapshot?.submoduleChanges ?? []
+            submoduleChanges: snapshot?.submoduleChanges ?? [],
+            worktreeName: repository.worktree?.name
         )
     }
 

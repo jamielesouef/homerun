@@ -2,6 +2,12 @@ import Foundation
 
 enum RepositoryFilterUseCase {
     static func matches(_ repository: TrackedRepository, filter: RepositoryStatusFilter) -> Bool {
+        repository.allCheckouts.contains { checkout in
+            checkoutMatches(checkout, filter: filter)
+        }
+    }
+
+    static func checkoutMatches(_ repository: TrackedRepository, filter: RepositoryStatusFilter) -> Bool {
         switch filter {
         case .all:
             true
@@ -30,15 +36,17 @@ enum RepositoryFilterUseCase {
             guard matches(repository, filter: filter) else {
                 return false
             }
-            guard showsCleanRepositories || repository.status != .clean else {
+            guard showsCleanRepositories || repository.allCheckouts.contains(where: { $0.status != .clean }) else {
                 return false
             }
             guard trimmed.isEmpty == false else {
                 return true
             }
 
-            return repository.name.lowercased().contains(trimmed)
-                || repository.localPath?.path(percentEncoded: false).lowercased().contains(trimmed) == true
+            return repository.allCheckouts.contains { checkout in
+                checkout.checkoutName.lowercased().contains(trimmed)
+                    || checkout.localPath?.path(percentEncoded: false).lowercased().contains(trimmed) == true
+            }
         }
     }
 }

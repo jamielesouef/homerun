@@ -4,6 +4,7 @@ protocol GitClienting: Sendable {
     func isAvailable() async -> Bool
     func isRepository(at url: URL) async -> Bool
     func snapshot(at url: URL) async throws(GitError) -> GitRepositorySnapshot
+    func worktrees(at url: URL) async throws(GitError) -> [GitWorktree]
     func recentCommits(at url: URL, limit: Int) async throws(GitError) -> [GitCommitSummary]
     func diffSummary(at url: URL) async throws(GitError) -> String
     func stageTrackedChanges(at url: URL) async throws(GitError)

@@ -94,6 +94,12 @@ struct ProcessGitClient: GitClienting {
         )
     }
 
+    func worktrees(at url: URL) async throws(GitError) -> [GitWorktree] {
+        let result = try await runChecked(["worktree", "list", "--porcelain"], at: url)
+
+        return GitWorktreeParser.parse(porcelain: result.standardOutput)
+    }
+
     func recentCommits(at url: URL, limit: Int) async throws(GitError) -> [GitCommitSummary] {
         let result = try await runChecked(
             ["log", "--max-count=\(limit)", "--format=\(GitLogParser.format)"],

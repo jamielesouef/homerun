@@ -54,7 +54,10 @@ struct FileSystemRepositoryDiscovery: @unchecked Sendable, RepositoryDiscovering
             return
         }
         guard containsGitDirectory(directory) == false else {
-            found.append(DiscoveredRepository(url: directory))
+            if isLinkedWorktree(directory) == false {
+                found.append(DiscoveredRepository(url: directory))
+            }
+
             return
         }
 
@@ -93,6 +96,14 @@ struct FileSystemRepositoryDiscovery: @unchecked Sendable, RepositoryDiscovering
 
     private func containsGitDirectory(_ url: URL) -> Bool {
         fileManager.fileExists(atPath: url.appending(path: ".git").path(percentEncoded: false))
+    }
+
+    private func isLinkedWorktree(_ url: URL) -> Bool {
+        guard let contents = try? String(contentsOf: url.appending(path: ".git"), encoding: .utf8) else {
+            return false
+        }
+
+        return GitWorktreeParser.isLinkedWorktreePointer(contents)
     }
 
     private func loadRules(in directory: URL) -> GitIgnoreRules {
