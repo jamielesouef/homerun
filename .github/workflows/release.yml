@@ -10,14 +10,14 @@ permissions:
 
 jobs:
   release:
-    runs-on: macos-27
+    runs-on: macos-26
     env:
       TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_27.app
+        run: sudo xcode-select -s /Applications/Xcode_26.app
 
       - name: Build arm64
         working-directory: cli
