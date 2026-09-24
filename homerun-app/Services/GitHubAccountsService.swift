@@ -81,6 +81,10 @@ final class GitHubAccountsService: SingleFlightRefreshing {
     }
 
     func associate(_ login: String?, with repository: TrackedRepository) {
+        guard repository.shared.preferredGitHubAccount != login else {
+            return
+        }
+
         var shared = repository.shared
         shared.preferredGitHubAccount = login
         repositories.update(shared)

@@ -41,52 +41,48 @@ struct ReadinessSettingsSection: View {
     @ViewBuilder
     private func editor(for repository: TrackedRepository) -> some View {
         LabeledContent(String(localized: "Setup instructions")) {
-            TextField("README.md", text: optionalBinding(repository, \.setupInstructionsPath))
-                .textFieldStyle(.roundedBorder)
+            MirroredTextField(
+                placeholder: "README.md",
+                value: repository.shared.setupInstructionsPath,
+                format: ReadinessFieldUseCase.text(for:),
+                parse: ReadinessFieldUseCase.optionalValue(from:)
+            ) { path in
+                update(repository) { $0.setupInstructionsPath = path }
+            }
+            .textFieldStyle(.roundedBorder)
         }
 
         LabeledContent(String(localized: "Required environment variables")) {
-            TextField("API_HOST, API_TOKEN", text: listBinding(repository, \.requiredEnvironmentVariableNames))
-                .textFieldStyle(.roundedBorder)
+            MirroredTextField(
+                placeholder: "API_HOST, API_TOKEN",
+                value: repository.shared.requiredEnvironmentVariableNames,
+                format: ReadinessFieldUseCase.text(for:),
+                parse: ReadinessFieldUseCase.names(from:)
+            ) { names in
+                update(repository) { $0.requiredEnvironmentVariableNames = names }
+            }
+            .textFieldStyle(.roundedBorder)
         }
 
         LabeledContent(String(localized: "Expected configuration templates")) {
-            TextField(".env.example", text: listBinding(repository, \.expectedConfigurationTemplates))
-                .textFieldStyle(.roundedBorder)
+            MirroredTextField(
+                placeholder: ".env.example",
+                value: repository.shared.expectedConfigurationTemplates,
+                format: ReadinessFieldUseCase.text(for:),
+                parse: ReadinessFieldUseCase.names(from:)
+            ) { names in
+                update(repository) { $0.expectedConfigurationTemplates = names }
+            }
+            .textFieldStyle(.roundedBorder)
         }
     }
 
     // MARK: - Helpers
 
-    private func optionalBinding(
-        _ repository: TrackedRepository,
-        _ keyPath: WritableKeyPath<WorkspaceRepository, String?>
-    ) -> Binding<String> {
-        Binding(
-            get: { repository.shared[keyPath: keyPath] ?? "" },
-            set: { value in
-                var shared = repository.shared
-                shared[keyPath: keyPath] = value.isEmpty ? nil : value
-                repositories.update(shared)
-            }
-        )
-    }
-
-    private func listBinding(
-        _ repository: TrackedRepository,
-        _ keyPath: WritableKeyPath<WorkspaceRepository, [String]>
-    ) -> Binding<String> {
-        Binding(
-            get: { repository.shared[keyPath: keyPath].joined(separator: ", ") },
-            set: { value in
-                var shared = repository.shared
-                shared[keyPath: keyPath] = value
-                    .split(separator: ",")
-                    .map { $0.trimmingCharacters(in: .whitespaces) }
-                    .filter { $0.isEmpty == false }
-                repositories.update(shared)
-            }
-        )
+    private func update(_ repository: TrackedRepository, _ mutate: (inout WorkspaceRepository) -> Void) {
+        var shared = repository.shared
+        mutate(&shared)
+        repositories.update(shared)
     }
 }
 

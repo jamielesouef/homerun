@@ -5,34 +5,38 @@ struct TodaySettingsSection: View {
 
     @Environment(\.settingsService) private var settings
 
+    // MARK: - State
+
+    @State private var defaultFilter = AppPreferences.default.defaultRepositoryStatusFilter
+    @State private var showsCleanRepositories = AppPreferences.default.showsCleanRepositories
+
     // MARK: - View
 
     var body: some View {
         Section(String(localized: "Today")) {
-            Picker(String(localized: "Default status filter"), selection: filterBinding) {
+            Picker(String(localized: "Default status filter"), selection: $defaultFilter) {
                 ForEach(RepositoryStatusFilter.allCases) { filter in
                     Text(filter.title).tag(filter)
                 }
             }
 
-            Toggle(String(localized: "Show repositories that are clean and fully synced"), isOn: cleanBinding)
+            Toggle(
+                String(localized: "Show repositories that are clean and fully synced"),
+                isOn: $showsCleanRepositories
+            )
         }
-    }
-
-    // MARK: - Helpers
-
-    private var filterBinding: Binding<RepositoryStatusFilter> {
-        Binding(
-            get: { settings.preferences.defaultRepositoryStatusFilter },
-            set: { value in settings.updatePreferences { $0.defaultRepositoryStatusFilter = value } }
-        )
-    }
-
-    private var cleanBinding: Binding<Bool> {
-        Binding(
-            get: { settings.preferences.showsCleanRepositories },
-            set: { value in settings.updatePreferences { $0.showsCleanRepositories = value } }
-        )
+        .onChange(of: settings.preferences.defaultRepositoryStatusFilter, initial: true) {
+            defaultFilter = settings.preferences.defaultRepositoryStatusFilter
+        }
+        .onChange(of: defaultFilter) {
+            settings.updatePreferences { $0.defaultRepositoryStatusFilter = defaultFilter }
+        }
+        .onChange(of: settings.preferences.showsCleanRepositories, initial: true) {
+            showsCleanRepositories = settings.preferences.showsCleanRepositories
+        }
+        .onChange(of: showsCleanRepositories) {
+            settings.updatePreferences { $0.showsCleanRepositories = showsCleanRepositories }
+        }
     }
 }
 

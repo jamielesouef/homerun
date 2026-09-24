@@ -62,12 +62,18 @@ final class ResumeService {
     }
 
     func setSelection(_ isSelected: Bool, for identifier: String) {
-        guard case var .reviewing(plan) = phase else {
+        guard case let .reviewing(plan) = phase else {
             return
         }
 
-        plan.setSelection(isSelected, for: identifier)
-        phase = .reviewing(plan)
+        var updated = plan
+        updated.setSelection(isSelected, for: identifier)
+
+        guard updated != plan else {
+            return
+        }
+
+        phase = .reviewing(updated)
     }
 
     func cancelReview() {

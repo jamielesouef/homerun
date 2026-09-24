@@ -4,8 +4,7 @@ struct SyncPlanStepView: View {
     // MARK: - Inputs
 
     let step: SyncPlanStep
-    let toggleUntracked: (String) -> Void
-    let isSelected: (String) -> Bool
+    let onUntrackedChange: (String, Bool) -> Void
 
     // MARK: - View
 
@@ -74,13 +73,12 @@ struct SyncPlanStepView: View {
                     .font(.caption.weight(.semibold))
 
                 ForEach(step.selectableUntrackedPaths, id: \.self) { path in
-                    Toggle(isOn: binding(for: path)) {
-                        Text(path)
-                            .font(.caption)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                    UntrackedPathToggle(
+                        path: path,
+                        isSelected: step.includedUntrackedPaths.contains(path)
+                    ) { isSelected in
+                        onUntrackedChange(path, isSelected)
                     }
-                    .toggleStyle(.checkbox)
                 }
             }
         }
@@ -110,15 +108,6 @@ struct SyncPlanStepView: View {
             .foregroundStyle(.orange)
         }
     }
-
-    // MARK: - Helpers
-
-    private func binding(for path: String) -> Binding<Bool> {
-        Binding(
-            get: { isSelected(path) },
-            set: { _ in toggleUntracked(path) }
-        )
-    }
 }
 
 #if DEBUG
@@ -133,13 +122,12 @@ struct SyncPlanStepView: View {
                     GitFileChange(path: "Sources/Login.swift", status: .modified),
                     GitFileChange(path: "Sources/Removed.swift", status: .deleted)
                 ],
-                selectableUntrackedPaths: ["Notes.md"],
-                includedUntrackedPaths: [],
+                selectableUntrackedPaths: ["Notes.md", "Scratch.swift"],
+                includedUntrackedPaths: ["Notes.md"],
                 outstandingBranches: [GitBranchRef(name: "spike", upstream: nil, aheadCount: 0, behindCount: 0)],
                 submoduleChanges: [GitSubmoduleChange(path: "Vendor/Lib", kind: .commitDiffers)]
             ),
-            toggleUntracked: { _ in },
-            isSelected: { _ in false }
+            onUntrackedChange: { _, _ in }
         )
         .padding()
         .frame(width: 560)
@@ -158,8 +146,7 @@ struct SyncPlanStepView: View {
                 outstandingBranches: [],
                 submoduleChanges: []
             ),
-            toggleUntracked: { _ in },
-            isSelected: { _ in false }
+            onUntrackedChange: { _, _ in }
         )
         .padding()
         .frame(width: 560)

@@ -23,6 +23,17 @@ final class SyncService {
         return plan
     }
 
+    var isRunningOrFinished: Bool {
+        switch phase {
+        case .running,
+             .finished:
+            true
+        case .idle,
+             .reviewing:
+            false
+        }
+    }
+
     // MARK: - Private
 
     private let engine: any RepositorySyncPerforming
@@ -61,16 +72,19 @@ final class SyncService {
         phase = .reviewing(plan)
     }
 
-    func toggleUntracked(_ path: String, for identifier: String) {
-        var paths = untrackedSelections[identifier] ?? []
-
-        guard paths.insert(path).inserted == false else {
-            untrackedSelections[identifier] = paths
-            refreshReview()
+    func setUntracked(_ path: String, isSelected: Bool, for identifier: String) {
+        guard isUntrackedSelected(path, for: identifier) != isSelected else {
             return
         }
 
-        paths.remove(path)
+        var paths = untrackedSelections[identifier] ?? []
+
+        if isSelected {
+            paths.insert(path)
+        } else {
+            paths.remove(path)
+        }
+
         untrackedSelections[identifier] = paths
         refreshReview()
     }
@@ -80,10 +94,18 @@ final class SyncService {
     }
 
     func cancelReview() {
+        guard case .reviewing = phase else {
+            return
+        }
+
         phase = .idle
     }
 
     func dismissSummary() {
+        guard case .finished = phase else {
+            return
+        }
+
         phase = .idle
     }
 

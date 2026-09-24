@@ -103,10 +103,9 @@ struct PortableWorkspaceSettingsSection: View {
             DisclosureGroup(String(localized: "Preferred relative paths")) {
                 ForEach(repositories.repositories) { repository in
                     LabeledContent(repository.name) {
-                        TextField(
-                            repository.name,
-                            text: relativePathBinding(for: repository)
-                        )
+                        MirroredTextField(repository.name, value: repository.shared.preferredRelativePath) { path in
+                            workspace.setPreferredRelativePath(path, for: repository.id)
+                        }
                         .textFieldStyle(.roundedBorder)
                     }
                 }
@@ -151,15 +150,6 @@ struct PortableWorkspaceSettingsSection: View {
         Task {
             await workspace.exportManifest(named: url.deletingPathExtension().lastPathComponent, to: url)
         }
-    }
-
-    private func relativePathBinding(for repository: TrackedRepository) -> Binding<String> {
-        Binding(
-            get: { repository.shared.preferredRelativePath },
-            set: { value in
-                workspace.setPreferredRelativePath(value, for: repository.id)
-            }
-        )
     }
 }
 

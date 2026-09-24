@@ -6,13 +6,18 @@ struct GitHubAccountSettingsSection: View {
     @Environment(\.settingsService) private var settings
     @Environment(\.accountsService) private var accounts
 
+    // MARK: - State
+
+    @State private var fallbackEnabled = AppPreferences.default.accountFallbackEnabled
+    @State private var accessChecksEnabled = AppPreferences.default.accountAccessChecksEnabled
+
     // MARK: - View
 
     var body: some View {
         Section(String(localized: "GitHub accounts")) {
-            Toggle(String(localized: "Retry a refused push with the other signed-in accounts"), isOn: fallbackBinding)
+            Toggle(String(localized: "Retry a refused push with the other signed-in accounts"), isOn: $fallbackEnabled)
 
-            Toggle(String(localized: "Check account access before syncing"), isOn: accessCheckBinding)
+            Toggle(String(localized: "Check account access before syncing"), isOn: $accessChecksEnabled)
 
             Text(
                 String(
@@ -26,22 +31,18 @@ struct GitHubAccountSettingsSection: View {
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         }
-    }
-
-    // MARK: - Helpers
-
-    private var fallbackBinding: Binding<Bool> {
-        Binding(
-            get: { settings.preferences.accountFallbackEnabled },
-            set: { accounts.setFallbackEnabled($0) }
-        )
-    }
-
-    private var accessCheckBinding: Binding<Bool> {
-        Binding(
-            get: { settings.preferences.accountAccessChecksEnabled },
-            set: { accounts.setAccessChecksEnabled($0) }
-        )
+        .onChange(of: settings.preferences.accountFallbackEnabled, initial: true) {
+            fallbackEnabled = settings.preferences.accountFallbackEnabled
+        }
+        .onChange(of: fallbackEnabled) {
+            accounts.setFallbackEnabled(fallbackEnabled)
+        }
+        .onChange(of: settings.preferences.accountAccessChecksEnabled, initial: true) {
+            accessChecksEnabled = settings.preferences.accountAccessChecksEnabled
+        }
+        .onChange(of: accessChecksEnabled) {
+            accounts.setAccessChecksEnabled(accessChecksEnabled)
+        }
     }
 }
 

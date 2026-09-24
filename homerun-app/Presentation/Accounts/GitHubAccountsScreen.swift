@@ -7,6 +7,11 @@ struct GitHubAccountsScreen: View {
     @Environment(\.repositoriesService) private var repositories
     @Environment(\.settingsService) private var settings
 
+    // MARK: - State
+
+    @State private var isFallbackEnabled = false
+    @State private var isAccessCheckEnabled = false
+
     // MARK: - View
 
     var body: some View {
@@ -21,6 +26,18 @@ struct GitHubAccountsScreen: View {
         }
         .task {
             await accounts.start()
+        }
+        .onChange(of: settings.preferences.accountFallbackEnabled, initial: true) {
+            isFallbackEnabled = settings.preferences.accountFallbackEnabled
+        }
+        .onChange(of: isFallbackEnabled) {
+            accounts.setFallbackEnabled(isFallbackEnabled)
+        }
+        .onChange(of: settings.preferences.accountAccessChecksEnabled, initial: true) {
+            isAccessCheckEnabled = settings.preferences.accountAccessChecksEnabled
+        }
+        .onChange(of: isAccessCheckEnabled) {
+            accounts.setAccessChecksEnabled(isAccessCheckEnabled)
         }
     }
 
@@ -108,9 +125,9 @@ struct GitHubAccountsScreen: View {
             Text(String(localized: "When a push is refused"))
                 .font(.headline)
 
-            Toggle(String(localized: "Retry with the other signed-in accounts"), isOn: fallbackBinding)
+            Toggle(String(localized: "Retry with the other signed-in accounts"), isOn: $isFallbackEnabled)
 
-            Toggle(String(localized: "Check account access before syncing"), isOn: accessCheckBinding)
+            Toggle(String(localized: "Check account access before syncing"), isOn: $isAccessCheckEnabled)
 
             Text(
                 String(
@@ -131,49 +148,16 @@ struct GitHubAccountsScreen: View {
                 .font(.headline)
 
             ForEach(repositories.repositories) { repository in
-                VStack(alignment: .leading, spacing: AppSpacing.xsmall) {
-                    Picker(repository.name, selection: accountBinding(for: repository)) {
-                        Text(String(localized: "No preference")).tag(String?.none)
-
-                        ForEach(accounts.accounts) { account in
-                            Text(account.login).tag(String?.some(account.login))
-                        }
-                    }
-
-                    if let explanation = accounts.inapplicabilityExplanation(for: repository) {
-                        Text(explanation)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                RepositoryAccountPicker(
+                    repositoryName: repository.name,
+                    preferredLogin: repository.shared.preferredGitHubAccount,
+                    accounts: accounts.accounts,
+                    explanation: accounts.inapplicabilityExplanation(for: repository)
+                ) { login in
+                    accounts.associate(login, with: repository)
                 }
             }
         }
-    }
-
-    // MARK: - Helpers
-
-    private var fallbackBinding: Binding<Bool> {
-        Binding(
-            get: { settings.preferences.accountFallbackEnabled },
-            set: { accounts.setFallbackEnabled($0) }
-        )
-    }
-
-    private var accessCheckBinding: Binding<Bool> {
-        Binding(
-            get: { settings.preferences.accountAccessChecksEnabled },
-            set: { accounts.setAccessChecksEnabled($0) }
-        )
-    }
-
-    private func accountBinding(for repository: TrackedRepository) -> Binding<String?> {
-        Binding(
-            get: { repository.shared.preferredGitHubAccount },
-            set: { login in
-                accounts.associate(login, with: repository)
-            }
-        )
     }
 }
 

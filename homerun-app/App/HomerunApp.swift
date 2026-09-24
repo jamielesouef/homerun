@@ -8,6 +8,10 @@ struct HomerunApp: App {
 
     @Environment(\.settingsService) private var settings
 
+    // MARK: - State
+
+    @State private var showsMenuBarItem = LocalSettings.default.showsMenuBarItem
+
     // MARK: - Scene
 
     var body: some Scene {
@@ -18,20 +22,17 @@ struct HomerunApp: App {
         .defaultSize(width: 1000, height: 680)
         .windowResizability(.contentMinSize)
 
-        MenuBarExtra(isInserted: menuBarBinding) {
+        MenuBarExtra(isInserted: $showsMenuBarItem) {
             MenuBarContentView()
         } label: {
             MenuBarLabel()
         }
         .menuBarExtraStyle(.window)
-    }
-
-    // MARK: - Helpers
-
-    private var menuBarBinding: Binding<Bool> {
-        Binding(
-            get: { settings.localSettings.showsMenuBarItem },
-            set: { value in settings.updateLocalSettings { $0.showsMenuBarItem = value } }
-        )
+        .onChange(of: settings.localSettings.showsMenuBarItem, initial: true) {
+            showsMenuBarItem = settings.localSettings.showsMenuBarItem
+        }
+        .onChange(of: showsMenuBarItem) {
+            settings.updateLocalSettings { $0.showsMenuBarItem = showsMenuBarItem }
+        }
     }
 }
