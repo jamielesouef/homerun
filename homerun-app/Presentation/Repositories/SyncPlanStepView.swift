@@ -38,6 +38,12 @@ struct SyncPlanStepView: View {
                 }
             }
 
+            if let worktreeName = step.worktreeName {
+                WorktreeLabel(name: worktreeName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Text(step.action.summary)
                 .font(.callout)
                 .foregroundStyle(step.isActionable ? Color.primary : Color.secondary)

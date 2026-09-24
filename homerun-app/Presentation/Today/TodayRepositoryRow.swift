@@ -27,6 +27,10 @@ struct TodayRepositoryRow: View {
                     }
                 }
 
+                if repository.worktrees.isEmpty == false {
+                    LinkedWorktreesView(worktrees: repository.worktrees)
+                }
+
                 if let report, report.isReadyToResume == false {
                     Text(String(localized: "\(report.issueCount) thing(s) would stop this continuing elsewhere."))
                         .font(.caption)
@@ -61,6 +65,12 @@ struct TodayRepositoryRow: View {
         )
         .padding()
         .frame(width: 520)
+    }
+
+    #Preview("Clean, with a dirty worktree") {
+        TodayRepositoryRow(repository: PreviewGraph.repositoryWithWorktrees, report: nil, syncAction: {})
+            .padding()
+            .frame(width: 520)
     }
 
     #Preview("Not cloned, long name") {

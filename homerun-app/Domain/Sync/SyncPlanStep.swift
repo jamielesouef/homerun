@@ -10,9 +10,18 @@ struct SyncPlanStep: Equatable, Identifiable {
     let includedUntrackedPaths: [String]
     let outstandingBranches: [GitBranchRef]
     let submoduleChanges: [GitSubmoduleChange]
+    var worktreeName: String?
 
     var id: String {
         identifier
+    }
+
+    var displayName: String {
+        guard let worktreeName else {
+            return repositoryName
+        }
+
+        return String(localized: "\(repositoryName) › \(worktreeName)")
     }
 
     var isActionable: Bool {

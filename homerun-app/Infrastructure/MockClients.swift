@@ -5,6 +5,7 @@
     struct MockGitClient: GitClienting {
         var snapshotsByPath: [String: GitRepositorySnapshot] = [:]
         var defaultSnapshot: GitRepositorySnapshot?
+        var worktreesByPath: [String: [GitWorktree]] = [:]
         var commits: [GitCommitSummary] = []
 
         func isAvailable() async -> Bool {
@@ -21,6 +22,10 @@
             }
 
             return snapshot
+        }
+
+        func worktrees(at url: URL) async throws(GitError) -> [GitWorktree] {
+            worktreesByPath[url.path(percentEncoded: false)] ?? []
         }
 
         func recentCommits(at url: URL, limit: Int) async throws(GitError) -> [GitCommitSummary] {

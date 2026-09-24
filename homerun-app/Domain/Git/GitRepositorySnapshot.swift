@@ -11,6 +11,7 @@ struct GitRepositorySnapshot: Equatable {
     let workingTree: GitWorkingTreeStatus
     let branches: [GitBranchRef]
     let submoduleChanges: [GitSubmoduleChange]
+    var branchesOwnedElsewhere: Set<String> = []
 
     var isDetached: Bool {
         currentBranch == nil
@@ -34,7 +35,9 @@ struct GitRepositorySnapshot: Equatable {
 
     var otherBranchesNeedingPush: [GitBranchRef] {
         branches.filter { branch in
-            branch.name != currentBranch && (branch.isLocalOnly || branch.hasUnpushedCommits)
+            branch.name != currentBranch
+                && branchesOwnedElsewhere.contains(branch.name) == false
+                && (branch.isLocalOnly || branch.hasUnpushedCommits)
         }
     }
 

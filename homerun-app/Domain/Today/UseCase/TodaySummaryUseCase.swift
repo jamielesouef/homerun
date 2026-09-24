@@ -7,7 +7,7 @@ enum TodaySummaryUseCase {
     ) -> TodaySummary {
         TodaySummary(
             unfinishedWork: repositories.filter(\.hasLocalOnlyWork),
-            syncProblems: repositories.filter { hasSyncProblem($0) },
+            syncProblems: repositories.filter { $0.allCheckouts.contains(where: hasSyncProblem) },
             readyToResume: repositories.filter { isReadyToResume($0, readiness: readiness) },
             notClonedHere: repositories.filter { $0.isCloned == false },
             lastSuccessfulSync: repositories.compactMap(\.shared.lastSuccessfulSyncDate).max()
@@ -34,13 +34,13 @@ enum TodaySummaryUseCase {
     }
 
     private static func isReadyToResume(_ repository: TrackedRepository, readiness: [String: ReadinessReport]) -> Bool {
-        guard repository.isCloned, hasSyncProblem(repository) == false else {
+        guard repository.isCloned, repository.allCheckouts.contains(where: hasSyncProblem) == false else {
             return false
         }
         guard let report = readiness[repository.id] else {
             return repository.hasLocalOnlyWork == false
         }
 
-        return report.isReadyToResume
+        return report.isReadyToResume && repository.worktrees.contains(where: \.hasOwnLocalOnlyWork) == false
     }
 }
