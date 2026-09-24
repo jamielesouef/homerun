@@ -168,9 +168,8 @@ struct RepositoriesScreen: View {
     @ViewBuilder
     private var list: some View {
         switch repositories.loadState {
-        case .loading:
-            ProgressView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case let .loading(progress):
+            RepositoryLoadProgressView(progress: progress)
         case let .error(error):
             EmptyStateView(
                 symbolName: "exclamationmark.icloud",

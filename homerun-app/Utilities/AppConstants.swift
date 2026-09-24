@@ -13,4 +13,5 @@ enum AppConstants {
 
     static let discoveryMaximumDepth = 6
     static let recentCommitLimit = 10
+    static let concurrentRepositoryReads = 4
 }

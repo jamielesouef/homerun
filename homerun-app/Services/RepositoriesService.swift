@@ -6,7 +6,7 @@ final class RepositoriesService: SingleFlightRefreshing {
     // MARK: - State
 
     enum LoadState: Equatable {
-        case loading
+        case loading(RepositoryLoadProgress)
         case error(PersistenceError)
         case empty
         case loaded([TrackedRepository])
@@ -15,7 +15,7 @@ final class RepositoriesService: SingleFlightRefreshing {
     var loadState: LoadState {
         switch (isLoading, loadError, repositories.isEmpty) {
         case (true, _, true):
-            .loading
+            .loading(loadProgress)
         case (_, let error?, true):
             .error(error)
         case (_, nil, true):
@@ -69,13 +69,14 @@ final class RepositoriesService: SingleFlightRefreshing {
     private let gitClient: any GitClienting
     private let discovery: any RepositoryDiscovering
     private let readinessChecker: any ReadinessChecking
-    private let worktreeReader: TrackedWorktreeReader
+    private let reader: TrackedRepositoryReader
     private let fileManager: FileManager
     private let clock: any Clocking
     private let settings: SettingsService
 
     private var outcomes: [String: RepositorySyncOutcome] = [:]
     private var isLoading = false
+    private var loadProgress = RepositoryLoadProgress.opening
     private var loadError: PersistenceError?
     private var hasStarted = false
 
@@ -94,8 +95,8 @@ final class RepositoriesService: SingleFlightRefreshing {
         self.gitClient = gitClient
         self.discovery = discovery
         self.readinessChecker = readinessChecker
-        worktreeReader = TrackedWorktreeReader(gitClient: gitClient)
         self.fileManager = fileManager
+        reader = TrackedRepositoryReader(gitClient: gitClient, fileManager: fileManager)
         self.clock = clock
         self.settings = settings
         filter = settings.preferences.defaultRepositoryStatusFilter
@@ -351,6 +352,7 @@ final class RepositoriesService: SingleFlightRefreshing {
     func performRefresh() async {
         isLoading = true
         loadError = nil
+        loadProgress = .opening
 
         let shared: [WorkspaceRepository]
 
@@ -378,13 +380,48 @@ final class RepositoriesService: SingleFlightRefreshing {
 
 private extension RepositoriesService {
     func load(_ shared: [WorkspaceRepository], paths: [String: String]) async -> [TrackedRepository] {
-        var loaded: [TrackedRepository] = []
+        loadProgress = .starting(total: shared.count)
 
-        for repository in shared {
-            await loaded.append(tracked(repository, path: paths[repository.identifier]))
+        var loaded: [Int: TrackedRepository] = [:]
+
+        await withTaskGroup(of: (Int, TrackedRepository).self) { group in
+            var queue = shared.enumerated().makeIterator()
+
+            for _ in 0 ..< AppConstants.concurrentRepositoryReads {
+                startReading(next: &queue, in: &group, paths: paths)
+            }
+
+            for await (index, repository) in group {
+                guard Task.isCancelled == false else {
+                    group.cancelAll()
+                    return
+                }
+
+                loaded[index] = repository
+                loadProgress = loadProgress.finishedReading(repository.name)
+                startReading(next: &queue, in: &group, paths: paths)
+            }
         }
 
-        return loaded
+        return shared.indices.compactMap { loaded[$0] }
+    }
+
+    func startReading(
+        next queue: inout EnumeratedSequence<[WorkspaceRepository]>.Iterator,
+        in group: inout TaskGroup<(Int, TrackedRepository)>,
+        paths: [String: String]
+    ) {
+        guard let (index, repository) = queue.next() else {
+            return
+        }
+
+        let path = paths[repository.identifier]
+        let outcomes = outcomes
+        loadProgress = loadProgress.startingToRead(repository.name)
+
+        group.addTask { [reader] in
+            await (index, reader.read(repository, path: path, outcomes: outcomes))
+        }
     }
 
     func forgetLocalCheckout(of identifiers: Set<String>) {
@@ -422,33 +459,7 @@ private extension RepositoriesService {
     }
 
     func tracked(_ repository: WorkspaceRepository, path: String?) async -> TrackedRepository {
-        guard let path, fileManager.fileExists(atPath: path) else {
-            return TrackedRepository(shared: repository, lastSyncOutcome: outcomes[repository.identifier])
-        }
-
-        let directory = URL(filePath: path)
-        let outcome = outcomes[repository.identifier]
-
-        do {
-            let snapshot = try await gitClient.snapshot(at: directory)
-            let worktrees = await worktreeReader.worktrees(of: repository, at: directory, outcomes: outcomes)
-
-            let main = TrackedRepository(
-                shared: repository,
-                localPath: directory,
-                snapshot: snapshot,
-                lastSyncOutcome: outcome
-            )
-
-            return WorktreeUseCase.linking(main, to: worktrees)
-        } catch {
-            return TrackedRepository(
-                shared: repository,
-                localPath: directory,
-                lastSyncOutcome: outcome,
-                readError: error
-            )
-        }
+        await reader.read(repository, path: path, outcomes: outcomes)
     }
 
     func record(_ outcome: RepositorySyncOutcome) {

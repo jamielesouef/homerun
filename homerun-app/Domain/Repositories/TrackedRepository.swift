@@ -1,6 +1,6 @@
 import Foundation
 
-struct TrackedRepository: Equatable, Identifiable {
+struct TrackedRepository: Equatable, Identifiable, Sendable {
     let shared: WorkspaceRepository
     let localPath: URL?
     let snapshot: GitRepositorySnapshot?

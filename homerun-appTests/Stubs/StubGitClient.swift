@@ -27,7 +27,7 @@ actor StubGitClient: GitClienting {
     // MARK: - Snapshot gate
 
     private var isHoldingSnapshots = false
-    private var heldSnapshot: CheckedContinuation<Void, Never>?
+    private var heldSnapshots: [CheckedContinuation<Void, Never>] = []
     private var awaitingRequest: CheckedContinuation<Void, Never>?
     private var hasRequestedSnapshot = false
 
@@ -37,8 +37,8 @@ actor StubGitClient: GitClienting {
 
     func releaseSnapshots() {
         isHoldingSnapshots = false
-        heldSnapshot?.resume()
-        heldSnapshot = nil
+        heldSnapshots.forEach { $0.resume() }
+        heldSnapshots = []
     }
 
     func waitUntilSnapshotRequested() async {
@@ -133,7 +133,7 @@ actor StubGitClient: GitClienting {
 
         if isHoldingSnapshots {
             await withCheckedContinuation { continuation in
-                heldSnapshot = continuation
+                heldSnapshots.append(continuation)
             }
         }
 

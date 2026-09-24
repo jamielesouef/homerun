@@ -6,7 +6,7 @@ final class OnboardingService: SingleFlightRefreshing {
     // MARK: - State
 
     enum LoadState: Equatable {
-        case checking
+        case checking([StartupStep])
         case blocked([OnboardingRequirement])
         case optional([OnboardingRequirement])
         case ready
@@ -15,7 +15,7 @@ final class OnboardingService: SingleFlightRefreshing {
     var loadState: LoadState {
         switch (isChecking, requirements.filter(\.isBlocking).isEmpty, requirements.isEmpty) {
         case (true, _, _):
-            .checking
+            .checking(startupSteps)
         case (false, false, _):
             .blocked(requirements)
         case (false, true, false):
@@ -51,6 +51,7 @@ final class OnboardingService: SingleFlightRefreshing {
     private let settings: SettingsService
 
     private var isChecking = true
+    private var startupSteps = StartupProgressUseCase.waitingSteps()
     private var requirements: [OnboardingRequirement] = []
     private var hasStarted = false
 
@@ -91,21 +92,73 @@ final class OnboardingService: SingleFlightRefreshing {
 
     func performRefresh() async {
         isChecking = true
+        startupSteps = StartupProgressUseCase.waitingSteps()
 
-        let isGitAvailable = await gitClient.isAvailable()
-        let isGitHubCLIAvailable = await gitHubClient.isAvailable()
-        let accounts = await isGitHubCLIAvailable ? (try? gitHubClient.accounts()) ?? [] : []
+        async let isGitAvailable = checkGit()
+        async let gitHub = checkGitHub()
+
+        let (isGitHubCLIAvailable, accounts) = await gitHub
+        let isGitAvailableResult = await isGitAvailable
 
         guard Task.isCancelled == false else {
             return
         }
 
         availability = ToolAvailability(
-            isGitAvailable: isGitAvailable,
+            isGitAvailable: isGitAvailableResult,
             isGitHubCLIAvailable: isGitHubCLIAvailable,
             gitHubAccounts: accounts
         )
         requirements = OnboardingRequirementUseCase.requirements(for: availability)
         isChecking = false
+    }
+
+    // MARK: - Startup checks
+
+    private func checkGit() async -> Bool {
+        show(StartupProgressUseCase.running(.git))
+
+        let isAvailable = await gitClient.isAvailable()
+
+        guard Task.isCancelled == false else {
+            return isAvailable
+        }
+
+        show(StartupProgressUseCase.gitChecked(isAvailable: isAvailable))
+
+        return isAvailable
+    }
+
+    private func checkGitHub() async -> (isAvailable: Bool, accounts: [GitHubAccount]) {
+        show(StartupProgressUseCase.running(.gitHubCLI))
+
+        let isAvailable = await gitHubClient.isAvailable()
+
+        guard Task.isCancelled == false else {
+            return (isAvailable, [])
+        }
+
+        show(StartupProgressUseCase.gitHubCLIChecked(isAvailable: isAvailable))
+
+        guard isAvailable else {
+            show(StartupProgressUseCase.gitHubAccountsChecked(isGitHubCLIAvailable: false, accounts: []))
+            return (false, [])
+        }
+
+        show(StartupProgressUseCase.running(.gitHubAccounts))
+
+        let accounts = await (try? gitHubClient.accounts()) ?? []
+
+        guard Task.isCancelled == false else {
+            return (true, accounts)
+        }
+
+        show(StartupProgressUseCase.gitHubAccountsChecked(isGitHubCLIAvailable: true, accounts: accounts))
+
+        return (true, accounts)
+    }
+
+    private func show(_ step: StartupStep) {
+        startupSteps = StartupProgressUseCase.replacing(step, in: startupSteps)
     }
 }

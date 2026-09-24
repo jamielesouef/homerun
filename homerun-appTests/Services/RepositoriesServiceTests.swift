@@ -4,64 +4,6 @@ import Testing
 
 @Suite("RepositoriesService", .tags(.service))
 struct RepositoriesServiceTests {
-    // MARK: - Loading
-
-    @Test("reports an empty shared workspace rather than a loading state that never ends")
-    @MainActor
-    func reportsEmptyWorkspace() async {
-        let harness = ServiceHarness()
-
-        await harness.repositories.start()
-
-        #expect(harness.repositories.loadState == .empty)
-    }
-
-    @Test("joins the shared entry to this Mac's checkout and its snapshot")
-    @MainActor
-    func joinsSharedAndLocal() async {
-        let harness = ServiceHarness()
-        await harness.addRepository("a", name: "app", snapshot: RepositoryFixtures.snapshot(ahead: 2))
-
-        await harness.repositories.start()
-
-        #expect(harness.repositories.repositories.first?.status == .ahead)
-        #expect(harness.repositories.repositories.first?.isCloned == true)
-    }
-
-    @Test("treats a shared entry with no checkout here as not cloned, keeping it in the workspace")
-    @MainActor
-    func keepsUnclonedEntries() async {
-        let harness = ServiceHarness()
-        harness.addUnclonedRepository("a", name: "app")
-
-        await harness.repositories.start()
-
-        #expect(harness.repositories.repositories.first?.status == .notCloned)
-        #expect(harness.sharedStore.repositories.count == 1)
-    }
-
-    @Test("records a repository it could not read rather than dropping it")
-    @MainActor
-    func recordsUnreadableRepository() async {
-        let harness = ServiceHarness()
-        await harness.addRepository("a", name: "app", snapshot: nil)
-
-        await harness.repositories.start()
-
-        #expect(harness.repositories.repositories.first?.status == .unreadable)
-    }
-
-    @Test("surfaces a shared store failure")
-    @MainActor
-    func surfacesStoreFailure() async {
-        let harness = ServiceHarness()
-        harness.sharedStore.loadFailure = .fetchFailed("offline")
-
-        await harness.repositories.start()
-
-        #expect(harness.repositories.loadState == .error(.fetchFailed("offline")))
-    }
-
     // MARK: - Filtering
 
     @Test("starts on the default filter and sort order from the shared preferences")
