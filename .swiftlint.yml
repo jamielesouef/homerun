@@ -235,3 +235,12 @@ custom_rules:
             - comment
             - doccomment
             - string
+
+    # A declaration that wraps across lines ends its own paragraph. Consecutive
+    # one-line `let`s stay grouped; a `let` or `var` straight after a line that is
+    # only `)` runs two blocks together. See App/AppDependencies.swift.
+    blank_line_after_multiline_declaration:
+        name: "Blank line after a multi-line declaration"
+        regex: '\n[ \t]*\)[ \t]*\n[ \t]*(let|var)\b'
+        message: "Leave a blank line between a multi-line declaration's closing ) and the next let or var"
+        severity: error

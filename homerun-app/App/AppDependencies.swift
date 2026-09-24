@@ -45,6 +45,7 @@ enum AppDependencies {
             defaults: defaults,
             defaultSettings: makeDefaultLocalSettings(resolver)
         )
+
         let sharedStore = makeSharedStore()
         let settings = SettingsService(sharedStore: sharedStore, localStore: localStore)
 
@@ -52,16 +53,19 @@ enum AppDependencies {
             baseEnvironment: processEnvironment,
             temporaryDirectory: temporaryDirectory
         )
+
         let gitClient = ProcessGitClient(
             commandRunner: commandRunner,
             gitPath: resolver.resolve("git", preferring: settings.localSettings.gitPath) ?? "/usr/bin/git"
         )
+
         let gitHubClient = ProcessGitHubCLIClient(
             commandRunner: commandRunner,
             gitHubCLIPath: resolver
                 .resolve("gh", preferring: settings.localSettings.gitHubCLIPath) ?? "/opt/homebrew/bin/gh",
             scriptRunnerPath: resolver.resolve("osascript", preferring: nil) ?? "/usr/bin/osascript"
         )
+
         let clock = SystemClock(timeZone: TimeZone.current)
 
         return CoreDependencies(

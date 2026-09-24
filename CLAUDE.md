@@ -40,6 +40,8 @@ code follows, not a suggestion. The short version:
 - Exhaustive `switch`, no `default`. Adding an enum case must break the build
   everywhere it matters — this is load-bearing and has caught real bugs.
 - `foo == false`, never `!foo`. One type per file. `// MARK: -` per section.
+- A `let` that wraps across lines gets a blank line after its closing `)`;
+  one-line `let`s stay grouped. `App/AppDependencies.swift` is the reference.
 - User-facing copy is `String(localized:)`. Spacing from `AppSpacing`.
 - Every view ships `#Preview` variants under `#if DEBUG` — empty, long text, and
   the awkward state, not just the happy path.

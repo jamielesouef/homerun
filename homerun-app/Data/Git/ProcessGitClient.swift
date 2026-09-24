@@ -58,6 +58,7 @@ struct ProcessGitClient: GitClienting {
             ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
             at: url
         )
+
         let upstreamBranch = upstreamResult?.trimmedOutput
 
         let (ahead, behind) = await aheadBehindCounts(upstreamBranch: upstreamBranch, at: url)
@@ -66,12 +67,14 @@ struct ProcessGitClient: GitClienting {
             ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
             at: url
         )
+
         let workingTree = GitStatusParser.parse(porcelainZ: statusResult.standardOutput)
 
         let branchesResult = try await run(
             ["for-each-ref", "--format=\(GitBranchParser.format)", "refs/heads"],
             at: url
         )
+
         let branches = GitBranchParser.parse(forEachRef: branchesResult.standardOutput)
 
         let submoduleResult = try? await runChecked(["submodule", "status", "--recursive"], at: url)

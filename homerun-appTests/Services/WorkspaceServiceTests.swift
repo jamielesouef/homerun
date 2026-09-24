@@ -23,6 +23,7 @@ struct WorkspaceServiceTests {
             manifest([RepositoryFixtures.shared("a", name: "app")]),
             at: manifestURL
         )
+
         let service = harness.makeWorkspace()
 
         await service.loadManifest(at: manifestURL)
@@ -51,6 +52,7 @@ struct WorkspaceServiceTests {
             manifest([RepositoryFixtures.shared("a", name: "app")]),
             at: manifestURL
         )
+
         let service = harness.makeWorkspace()
         await service.loadManifest(at: manifestURL)
 
@@ -81,6 +83,7 @@ struct WorkspaceServiceTests {
             manifest([RepositoryFixtures.shared("a", name: "app"), RepositoryFixtures.shared("b", name: "other")]),
             at: manifestURL
         )
+
         let service = harness.makeWorkspace()
         await service.loadManifest(at: manifestURL)
 
@@ -100,6 +103,7 @@ struct WorkspaceServiceTests {
             manifest([RepositoryFixtures.shared("a", name: "renamed")]),
             at: manifestURL
         )
+
         let service = harness.makeWorkspace()
         await service.loadManifest(at: manifestURL)
 
