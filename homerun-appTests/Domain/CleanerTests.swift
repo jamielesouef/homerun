@@ -123,6 +123,7 @@ struct CleanupPlanUseCaseTests {
             isDeletable: false,
             path: nil
         )
+
         let items = CleanupPlanUseCase.items(runtimes: [bundled], derivedData: [], categories: [.simulatorRuntimes])
 
         #expect(items.first?.isDeletable == false)

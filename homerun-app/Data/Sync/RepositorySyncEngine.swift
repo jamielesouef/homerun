@@ -140,6 +140,7 @@ struct RepositorySyncEngine: RepositorySyncPerforming {
             setsUpstream: request.setsUpstream,
             preferredAccount: request.preferredAccount
         )
+
         let fallback = await pushFallback.retryPush(context)
 
         switch fallback {

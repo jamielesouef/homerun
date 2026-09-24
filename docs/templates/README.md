@@ -121,31 +121,47 @@ template.
     the design system diverges; then one shared token enum, never a raw point
     size or hex value in a view.
 
+19. **A multi-line declaration ends its own paragraph.** Consecutive one-line
+    `let`s stay grouped. Once a declaration wraps, leave a blank line between
+    its closing `)` and the next `let` or `var`, so each wrapped call reads as
+    one block. `App/AppDependencies.swift` is the reference.
+    ```swift
+    let fileManager = FileManager.default
+    let defaults = UserDefaults.standard
+
+    let localStore = UserDefaultsLocalSettingsStore(
+        defaults: defaults,
+        defaultSettings: makeDefaultLocalSettings(resolver)
+    )
+
+    let sharedStore = makeSharedStore()
+    ```
+
 ### Views
 
-19. **Member order**, each in its own `// MARK: -` section:
+20. **Member order**, each in its own `// MARK: -` section:
     `private enum Constants` → `@Environment` → `@State` / `@FocusState` →
     `@Binding` → `private let` dependencies → `let` / `var` inputs and
     closures → `body` → subviews → helpers.
-20. **A view holds no logic.** It reads service state, calls a use case, and
+21. **A view holds no logic.** It reads service state, calls a use case, and
     applies the result. No computed `Binding(get:set:)`. Pick the wrapper by
     who owns the value: `@State` if this view does, `@Binding` if the parent
     does. A change that is a service intent binds to `@State` and is sent
     from `.onChange(of:)`. No `@AppStorage` in a view; machine-local settings
     go through their service.
-21. **Every view ships a `#Preview` inside `#if DEBUG`**, with the empty,
+22. **Every view ships a `#Preview` inside `#if DEBUG`**, with the empty,
     long-text and no-image variants, not only the happy path.
-22. **One `@Entry` shape.** A concrete `@Observable` service gets an `@Entry`
+23. **One `@Entry` shape.** A concrete `@Observable` service gets an `@Entry`
     key whose default is the real implementation, hoisted into a
     `private let` so every read returns the same instance. A preview injects
     its own with `.environment(\.key, ...)`. Never a `#if DEBUG` mock default.
 
 ### Test doubles
 
-23. **`Mock*` lives in the app target**, wrapped in `#if DEBUG`, for previews
+24. **`Mock*` lives in the app target**, wrapped in `#if DEBUG`, for previews
     and for the composition root under `#if TESTING`. `Stub*` lives in the
     test target. Don't conflate them.
-24. **A mock is substituted only under `#if TESTING`**, a compile condition
+25. **A mock is substituted only under `#if TESTING`**, a compile condition
     your test build configuration defines and no other configuration does.
     `#if DEBUG` returning a mock puts a fake in the build every developer
     runs, so a missing injection stays invisible until release.

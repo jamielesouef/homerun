@@ -329,6 +329,7 @@ final class RepositoriesService: SingleFlightRefreshing {
             snapshot: snapshot,
             checksRemoteTags: checksRemoteTags
         )
+
         let report = await readinessChecker.evaluate(input)
 
         guard Task.isCancelled == false else {
