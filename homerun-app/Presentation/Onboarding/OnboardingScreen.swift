@@ -41,9 +41,8 @@ struct OnboardingScreen: View {
     @ViewBuilder
     private var content: some View {
         switch service.loadState {
-        case .checking:
-            ProgressView()
-                .frame(maxWidth: .infinity)
+        case let .checking(steps):
+            StartupChecklist(steps: steps)
         case let .blocked(requirements):
             requirementList(requirements)
         case let .optional(requirements):

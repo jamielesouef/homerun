@@ -11,6 +11,33 @@ actor StubGitHubCLIClient: GitHubCLIClienting {
     var accessibleRemotes: Set<String> = []
     var signInError: GitHubCLIError?
 
+    // MARK: - Accounts gate
+
+    private var isHoldingAccounts = false
+    private var heldAccounts: [CheckedContinuation<Void, Never>] = []
+    private var awaitingAccountsRequest: CheckedContinuation<Void, Never>?
+    private var hasRequestedAccounts = false
+
+    func holdAccounts() {
+        isHoldingAccounts = true
+    }
+
+    func releaseAccounts() {
+        isHoldingAccounts = false
+        heldAccounts.forEach { $0.resume() }
+        heldAccounts = []
+    }
+
+    func waitUntilAccountsRequested() async {
+        guard hasRequestedAccounts == false else {
+            return
+        }
+
+        await withCheckedContinuation { continuation in
+            awaitingAccountsRequest = continuation
+        }
+    }
+
     // MARK: - Recording
 
     private(set) var switchedAccounts: [String] = []
@@ -46,6 +73,16 @@ actor StubGitHubCLIClient: GitHubCLIClienting {
     }
 
     func accounts() async throws(GitHubCLIError) -> [GitHubAccount] {
+        hasRequestedAccounts = true
+        awaitingAccountsRequest?.resume()
+        awaitingAccountsRequest = nil
+
+        if isHoldingAccounts {
+            await withCheckedContinuation { continuation in
+                heldAccounts.append(continuation)
+            }
+        }
+
         if let accountsError {
             throw accountsError
         }

@@ -19,8 +19,8 @@ struct RootView: View {
     @ViewBuilder
     private var content: some View {
         switch onboarding.loadState {
-        case .checking:
-            LaunchView()
+        case let .checking(steps):
+            LaunchView(steps: steps)
         case .blocked,
              .optional,
              .ready:
