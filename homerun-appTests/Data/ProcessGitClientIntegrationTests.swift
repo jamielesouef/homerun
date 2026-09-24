@@ -189,7 +189,10 @@ struct ProcessGitClientIntegrationTests {
         done
         exit 0
         """.write(to: hook, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: hook.path(percentEncoded: false))
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: hook.path(percentEncoded: false)
+        )
         try fixture.write("second\n", to: "README.md")
         try await fixture.git(["commit", "--all", "--message", "Second"], at: fixture.workingCopy)
 

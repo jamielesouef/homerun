@@ -19,7 +19,9 @@ enum SyncFailure: Error, Equatable {
         case .diverged:
             String(localized: "The branch has diverged from its remote. Resolve it by hand.")
         case let .protectedBranchFallbackFailed(branch, fallback, detail):
-            String(localized: "The remote refuses pushes to \(branch), and pushing \(fallback) instead also failed: \(detail)")
+            String(
+                localized: "The remote refuses pushes to \(branch), and pushing \(fallback) instead also failed: \(detail)"
+            )
         case .noRemote:
             String(localized: "No push destination is configured.")
         case .noUpstream:
