@@ -21,6 +21,7 @@ struct RepositorySyncEngineTests {
             identifier: "app",
             directory: directory,
             branch: "feature/login",
+            protectedBranchFallback: "homerun/feature/login-20260923-100000",
             remote: "origin",
             remoteURL: remoteURL,
             setsUpstream: setsUpstream,
@@ -105,6 +106,50 @@ struct RepositorySyncEngineTests {
         await git.setPushFailures([.diverged])
 
         #expect(await makeEngine(git: git).sync(request()).result == .failed(.diverged))
+    }
+
+    // MARK: - Protected branches
+
+    @Test("pushes the work to a new upstream branch when the remote protects the current one")
+    func pushesProtectedBranchToFallback() async {
+        let git = StubGitClient()
+        await git.setPushFailures([.branchProtected("GH006: Protected branch update failed")])
+
+        let report = await makeEngine(git: git).sync(request())
+
+        #expect(await git.calls == ["stageTracked", "commit", "push", "createBranch", "push"])
+        #expect(await git.createdBranches == ["homerun/feature/login-20260923-100000"])
+        #expect(await git.pushes.last?.branch == "homerun/feature/login-20260923-100000")
+        #expect(await git.pushes.last?.setUpstream == true)
+        #expect(report.branch == "homerun/feature/login-20260923-100000")
+        #expect(report.result == .succeeded(commit: "head0001", branch: "homerun/feature/login-20260923-100000"))
+        #expect(report.committed)
+    }
+
+    @Test("reports both branches when the fallback branch could not be pushed either")
+    func reportsFailedFallbackPush() async {
+        let git = StubGitClient()
+        await git.setPushFailures([.branchProtected("GH013"), .authenticationFailed("denied")])
+
+        let report = await makeEngine(git: git).sync(request())
+
+        #expect(report.result == .failed(.protectedBranchFallbackFailed(
+            branch: "feature/login",
+            fallback: "homerun/feature/login-20260923-100000",
+            detail: String(describing: GitError.authenticationFailed("denied"))
+        )))
+    }
+
+    @Test("does not push when the fallback branch could not be created")
+    func stopsWhenFallbackBranchCannotBeCreated() async {
+        let git = StubGitClient()
+        await git.setPushFailures([.branchProtected("GH006")])
+        await git.setCreateBranchError(.commandFailed("already exists"))
+
+        let report = await makeEngine(git: git).sync(request())
+
+        #expect(await git.pushes.count == 1)
+        #expect(report.outcome(finishedAt: .now).didFail)
     }
 
     @Test("does not retry with another account when fallback is switched off")

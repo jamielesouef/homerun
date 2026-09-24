@@ -108,6 +108,8 @@ struct RepositorySyncEngine: RepositorySyncPerforming {
         switch error {
         case let .authenticationFailed(detail):
             await retryWithFallback(request, committed: committed, detail: detail)
+        case .branchProtected:
+            await pushToFallbackBranch(request, committed: committed)
         case .diverged:
             report(request, result: .failed(.diverged), committed: committed)
         case .noRemoteConfigured:
@@ -121,6 +123,34 @@ struct RepositorySyncEngine: RepositorySyncPerforming {
              .cancelled:
             report(request, result: .failed(.git(String(describing: error))), committed: committed)
         }
+    }
+
+    /// The remote refused the branch itself, so the work goes up on a new branch
+    /// instead. Switching to it locally means the next sync follows it too.
+    private func pushToFallbackBranch(_ request: RepositorySyncRequest, committed: Bool) async -> RepositorySyncReport {
+        let fallback = request.protectedBranchFallback
+
+        do {
+            try await gitClient.createBranch(fallback, at: request.directory)
+            try await gitClient.push(branch: fallback, remote: request.remote, setUpstream: true, at: request.directory)
+        } catch {
+            let failure = SyncFailure.protectedBranchFallbackFailed(
+                branch: request.branch,
+                fallback: fallback,
+                detail: String(describing: error)
+            )
+
+            return report(request, result: .failed(failure), committed: committed)
+        }
+
+        AppLog.info("\(request.branch) is protected on \(request.identifier), pushed \(fallback) instead")
+
+        return await report(
+            request,
+            branch: fallback,
+            result: .succeeded(commit: headCommit(request), branch: fallback),
+            committed: committed
+        )
     }
 
     private func retryWithFallback(
@@ -164,13 +194,14 @@ struct RepositorySyncEngine: RepositorySyncPerforming {
 
     private func report(
         _ request: RepositorySyncRequest,
+        branch: String? = nil,
         result: RepositorySyncOutcome.Result,
         committed: Bool,
         fallback: AccountFallbackResult? = nil
     ) -> RepositorySyncReport {
         RepositorySyncReport(
             identifier: request.identifier,
-            branch: request.branch,
+            branch: branch ?? request.branch,
             result: result,
             fallback: fallback,
             committed: committed

@@ -4,6 +4,7 @@ struct RepositorySyncRequest: Equatable {
     let identifier: String
     let directory: URL
     let branch: String
+    let protectedBranchFallback: String
     let remote: String
     let remoteURL: String?
     let setsUpstream: Bool

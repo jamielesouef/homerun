@@ -21,6 +21,15 @@ enum GitFailureClassifier {
         "tip of your current branch is behind"
     ]
 
+    private static let protectedBranchMarkers = [
+        "protected branch",
+        "gh006",
+        "gh013",
+        "repository rule violations",
+        "can only be modified through pull requests",
+        "pre-receive hook declined"
+    ]
+
     static func isAuthenticationFailure(_ message: String) -> Bool {
         contains(message, markers: authenticationMarkers)
     }
@@ -29,7 +38,14 @@ enum GitFailureClassifier {
         contains(message, markers: divergenceMarkers)
     }
 
+    static func isProtectedBranchFailure(_ message: String) -> Bool {
+        contains(message, markers: protectedBranchMarkers)
+    }
+
     static func error(for message: String) -> GitError {
+        guard isProtectedBranchFailure(message) == false else {
+            return .branchProtected(message)
+        }
         guard isAuthenticationFailure(message) == false else {
             return .authenticationFailed(message)
         }
