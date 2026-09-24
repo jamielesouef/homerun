@@ -5,6 +5,7 @@ struct SyncPlanStepView: View {
 
     let step: SyncPlanStep
     let onUntrackedChange: (String, Bool) -> Void
+    let onSelectAllUntracked: (Bool) -> Void
 
     // MARK: - View
 
@@ -75,8 +76,19 @@ struct SyncPlanStepView: View {
     private var untrackedFiles: some View {
         if step.selectableUntrackedPaths.isEmpty == false {
             VStack(alignment: .leading, spacing: AppSpacing.xsmall) {
-                Text(String(localized: "Untracked files, only if you pick them"))
-                    .font(.caption.weight(.semibold))
+                HStack {
+                    Text(String(localized: "Untracked files, only if you pick them"))
+                        .font(.caption.weight(.semibold))
+
+                    Spacer(minLength: AppSpacing.small)
+
+                    Button(UntrackedSelectionUseCase
+                        .stepSelectAllTitle(isEverythingSelected: step.includesAllUntracked)) {
+                            onSelectAllUntracked(step.includesAllUntracked == false)
+                        }
+                        .buttonStyle(.link)
+                        .font(.caption)
+                }
 
                 ForEach(step.selectableUntrackedPaths, id: \.self) { path in
                     UntrackedPathToggle(
@@ -133,7 +145,34 @@ struct SyncPlanStepView: View {
                 outstandingBranches: [GitBranchRef(name: "spike", upstream: nil, aheadCount: 0, behindCount: 0)],
                 submoduleChanges: [GitSubmoduleChange(path: "Vendor/Lib", kind: .commitDiffers)]
             ),
-            onUntrackedChange: { _, _ in }
+            onUntrackedChange: { _, _ in },
+            onSelectAllUntracked: { _ in }
+        )
+        .padding()
+        .frame(width: 560)
+    }
+
+    #Preview("Every untracked file picked, long paths") {
+        SyncPlanStepView(
+            step: SyncPlanStep(
+                identifier: "c",
+                repositoryName: "app",
+                branch: "feature/login",
+                action: .commitAndPush(willCommit: true, setsUpstream: true),
+                trackedChanges: [],
+                selectableUntrackedPaths: [
+                    "Sources/Features/Authentication/Presentation/AnExtremelyLongViewName.swift",
+                    "Notes.md"
+                ],
+                includedUntrackedPaths: [
+                    "Sources/Features/Authentication/Presentation/AnExtremelyLongViewName.swift",
+                    "Notes.md"
+                ],
+                outstandingBranches: [],
+                submoduleChanges: []
+            ),
+            onUntrackedChange: { _, _ in },
+            onSelectAllUntracked: { _ in }
         )
         .padding()
         .frame(width: 560)
@@ -152,7 +191,8 @@ struct SyncPlanStepView: View {
                 outstandingBranches: [],
                 submoduleChanges: []
             ),
-            onUntrackedChange: { _, _ in }
+            onUntrackedChange: { _, _ in },
+            onSelectAllUntracked: { _ in }
         )
         .padding()
         .frame(width: 560)

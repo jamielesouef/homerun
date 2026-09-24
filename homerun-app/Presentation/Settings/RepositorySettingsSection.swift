@@ -8,6 +8,7 @@ struct RepositorySettingsSection: View {
     // MARK: - State
 
     @State private var requiresSyncConfirmation = AppPreferences.default.requiresSyncConfirmation
+    @State private var includesUntrackedFiles = AppPreferences.default.includesUntrackedFilesByDefault
     @State private var wipCommitPrefix = AppPreferences.default.wipCommitPrefix
     @State private var appendsTimestamp = AppPreferences.default.appendsTimestampToWIPCommit
     @State private var sortOrder = AppPreferences.default.repositorySortOrder
@@ -17,6 +18,17 @@ struct RepositorySettingsSection: View {
     var body: some View {
         Section(String(localized: "Repositories")) {
             Toggle(String(localized: "Ask me to confirm before syncing"), isOn: $requiresSyncConfirmation)
+
+            Toggle(String(localized: "Include untracked files by default"), isOn: $includesUntrackedFiles)
+
+            Text(
+                String(
+                    localized: "Every untracked file starts ticked in the sync review. Without confirmation they are committed straight away."
+                )
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
 
             LabeledContent(String(localized: "WIP commit prefix")) {
                 TextField(AppPreferences.fallbackWIPCommitPrefix, text: $wipCommitPrefix)
@@ -41,6 +53,12 @@ struct RepositorySettingsSection: View {
         }
         .onChange(of: requiresSyncConfirmation) {
             settings.updatePreferences { $0.requiresSyncConfirmation = requiresSyncConfirmation }
+        }
+        .onChange(of: settings.preferences.includesUntrackedFilesByDefault, initial: true) {
+            includesUntrackedFiles = settings.preferences.includesUntrackedFilesByDefault
+        }
+        .onChange(of: includesUntrackedFiles) {
+            settings.updatePreferences { $0.includesUntrackedFilesByDefault = includesUntrackedFiles }
         }
         .onChange(of: settings.preferences.wipCommitPrefix, initial: true) {
             wipCommitPrefix = settings.preferences.wipCommitPrefix
@@ -70,6 +88,6 @@ struct RepositorySettingsSection: View {
         }
         .formStyle(.grouped)
         .environment(\.settingsService, PreviewGraph.populated.settings)
-        .frame(width: 560, height: 280)
+        .frame(width: 560, height: 360)
     }
 #endif

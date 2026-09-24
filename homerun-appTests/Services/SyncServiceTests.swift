@@ -93,6 +93,64 @@ struct SyncServiceTests {
         #expect(service.reviewPlan?.actionableSteps.first?.includedUntrackedPaths == ["Notes.md"])
     }
 
+    @Test("selects every untracked file in the review, then none")
+    @MainActor
+    func selectsAllUntracked() async {
+        let harness = ServiceHarness()
+        await harness.addRepository(
+            "a",
+            name: "app",
+            snapshot: RepositoryFixtures.snapshot(branch: "feature/login", untracked: ["Notes.md", "Scratch.swift"])
+        )
+        await harness.repositories.start()
+        let service = harness.makeSync()
+        await service.review(identifiers: nil)
+
+        service.setAllUntracked(isSelected: true)
+
+        #expect(service.reviewPlan?.includesAllUntracked == true)
+
+        service.setAllUntracked(isSelected: false, for: "a")
+
+        #expect(service.reviewPlan?.steps.first?.includedUntrackedPaths.isEmpty == true)
+    }
+
+    @Test("ticks untracked files from the start when the setting says so")
+    @MainActor
+    func includesUntrackedByDefault() async {
+        let harness = ServiceHarness()
+        harness.settings.updatePreferences { $0.includesUntrackedFilesByDefault = true }
+        await harness.addRepository(
+            "a",
+            name: "app",
+            snapshot: RepositoryFixtures.snapshot(branch: "feature/login", untracked: ["Notes.md"])
+        )
+        await harness.repositories.start()
+        let service = harness.makeSync()
+
+        await service.review(identifiers: nil)
+
+        #expect(service.reviewPlan?.actionableSteps.first?.includedUntrackedPaths == ["Notes.md"])
+    }
+
+    @Test("leaves untracked files unticked by default")
+    @MainActor
+    func leavesUntrackedUntickedByDefault() async {
+        let harness = ServiceHarness()
+        await harness.addRepository(
+            "a",
+            name: "app",
+            snapshot: RepositoryFixtures.snapshot(branch: "feature/login", untracked: ["Notes.md"])
+        )
+        await harness.repositories.start()
+        let service = harness.makeSync()
+
+        await service.review(identifiers: nil)
+
+        #expect(harness.settings.preferences.includesUntrackedFilesByDefault == false)
+        #expect(service.reviewPlan?.steps.first?.includedUntrackedPaths.isEmpty == true)
+    }
+
     // MARK: - Running
 
     @Test("builds a request carrying the repository's own WIP prefix")

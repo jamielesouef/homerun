@@ -66,6 +66,12 @@ final class SyncService {
             includesWorktrees: includesWorktrees
         )
 
+        untrackedSelections = UntrackedSelectionUseCase.startingSelections(
+            for: selected,
+            existing: untrackedSelections,
+            includesByDefault: settings.preferences.includesUntrackedFilesByDefault
+        )
+
         let plan = SyncPlanUseCase.plan(for: selected, untrackedSelections: untrackedSelections)
 
         guard settings.preferences.requiresSyncConfirmation else {
@@ -91,6 +97,27 @@ final class SyncService {
         }
 
         untrackedSelections[identifier] = paths
+        refreshReview()
+    }
+
+    func setAllUntracked(isSelected: Bool, for identifier: String? = nil) {
+        guard let plan = reviewPlan else {
+            return
+        }
+
+        let steps = plan.steps.filter { identifier == nil || $0.identifier == identifier }
+
+        let selections = UntrackedSelectionUseCase.selectingAll(
+            isSelected,
+            in: steps,
+            existing: untrackedSelections
+        )
+
+        guard selections != untrackedSelections else {
+            return
+        }
+
+        untrackedSelections = selections
         refreshReview()
     }
 
