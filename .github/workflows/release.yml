@@ -31,7 +31,8 @@ jobs:
         run: |
           mkdir -p dist
           lipo -create -output dist/homerun \
-            cli/.build/arm64-apple-macosx/release/homerun
+            cli/.build/arm64-apple-macosx/release/homerun \
+            cli/.build/x86_64-apple-macosx/release/homerun
           chmod +x dist/homerun
           lipo -info dist/homerun
 
