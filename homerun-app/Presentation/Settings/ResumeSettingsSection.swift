@@ -7,13 +7,18 @@ struct ResumeSettingsSection: View {
     @Environment(\.settingsService) private var settings
     @Environment(\.filePanel) private var filePanel
 
+    // MARK: - State
+
+    @State private var preselectsFastForward = AppPreferences.default.preselectsSafeFastForward
+    @State private var offersToOpen = AppPreferences.default.offersToOpenProjectAfterResume
+
     // MARK: - View
 
     var body: some View {
         Section(String(localized: "Resume")) {
-            Toggle(String(localized: "Preselect safe fast-forward updates"), isOn: fastForwardBinding)
+            Toggle(String(localized: "Preselect safe fast-forward updates"), isOn: $preselectsFastForward)
 
-            Toggle(String(localized: "Offer to open a project once it is ready"), isOn: offerToOpenBinding)
+            Toggle(String(localized: "Offer to open a project once it is ready"), isOn: $offersToOpen)
 
             LabeledContent(String(localized: "Open projects with")) {
                 HStack {
@@ -31,6 +36,18 @@ struct ResumeSettingsSection: View {
                     }
                 }
             }
+        }
+        .onChange(of: settings.preferences.preselectsSafeFastForward, initial: true) {
+            preselectsFastForward = settings.preferences.preselectsSafeFastForward
+        }
+        .onChange(of: preselectsFastForward) {
+            settings.updatePreferences { $0.preselectsSafeFastForward = preselectsFastForward }
+        }
+        .onChange(of: settings.preferences.offersToOpenProjectAfterResume, initial: true) {
+            offersToOpen = settings.preferences.offersToOpenProjectAfterResume
+        }
+        .onChange(of: offersToOpen) {
+            settings.updatePreferences { $0.offersToOpenProjectAfterResume = offersToOpen }
         }
     }
 
@@ -53,20 +70,6 @@ struct ResumeSettingsSection: View {
         }
 
         return URL(filePath: path).lastPathComponent
-    }
-
-    private var fastForwardBinding: Binding<Bool> {
-        Binding(
-            get: { settings.preferences.preselectsSafeFastForward },
-            set: { value in settings.updatePreferences { $0.preselectsSafeFastForward = value } }
-        )
-    }
-
-    private var offerToOpenBinding: Binding<Bool> {
-        Binding(
-            get: { settings.preferences.offersToOpenProjectAfterResume },
-            set: { value in settings.updatePreferences { $0.offersToOpenProjectAfterResume = value } }
-        )
     }
 }
 

@@ -87,7 +87,7 @@ struct SyncServiceTests {
 
         #expect(service.reviewPlan?.actionableSteps.isEmpty == true)
 
-        service.toggleUntracked("Notes.md", for: "a")
+        service.setUntracked("Notes.md", isSelected: true, for: "a")
 
         #expect(service.isUntrackedSelected("Notes.md", for: "a"))
         #expect(service.reviewPlan?.actionableSteps.first?.includedUntrackedPaths == ["Notes.md"])

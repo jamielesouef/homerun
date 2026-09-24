@@ -1,17 +1,21 @@
 import SwiftUI
 
 struct CleanupItemRow: View {
+    // MARK: - State
+
+    @State private var isChecked = false
+
     // MARK: - Inputs
 
     let item: CleanupItem
     let isSelected: Bool
-    let toggle: () -> Void
+    let onSelectionChange: (Bool) -> Void
 
     // MARK: - View
 
     var body: some View {
         HStack(alignment: .top, spacing: AppSpacing.medium) {
-            Toggle(isOn: selectionBinding) {
+            Toggle(isOn: $isChecked) {
                 EmptyView()
             }
             .toggleStyle(.checkbox)
@@ -43,17 +47,19 @@ struct CleanupItemRow: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, AppSpacing.xsmall)
-    }
-
-    // MARK: - Helpers
-
-    private var selectionBinding: Binding<Bool> {
-        Binding(get: { isSelected }, set: { _ in toggle() })
+        .onChange(of: isSelected, initial: true) {
+            isChecked = isSelected
+        }
+        .onChange(of: isChecked) {
+            onSelectionChange(isChecked)
+        }
     }
 }
 
 #if DEBUG
     #Preview("Removable and protected") {
+        @Previewable @State var isRemovableSelected = true
+
         List {
             CleanupItemRow(
                 item: CleanupItem(
@@ -64,8 +70,8 @@ struct CleanupItemRow: View {
                     target: .simulatorRuntime("R1"),
                     isDeletable: true
                 ),
-                isSelected: true,
-                toggle: {}
+                isSelected: isRemovableSelected,
+                onSelectionChange: { isRemovableSelected = $0 }
             )
             CleanupItemRow(
                 item: CleanupItem(
@@ -78,9 +84,30 @@ struct CleanupItemRow: View {
                     isDeletable: false
                 ),
                 isSelected: false,
-                toggle: {}
+                onSelectionChange: { _ in }
             )
         }
         .frame(width: 620, height: 200)
+    }
+
+    #Preview("Long title, zero size") {
+        @Previewable @State var isSelected = false
+
+        List {
+            CleanupItemRow(
+                item: CleanupItem(
+                    title: "a-very-long-project-name-that-keeps-going-fhqzgkdlwbxmtnrpyavcsoeiuj",
+                    detail: "/Users/jamie/Library/Developer/Xcode/DerivedData/" +
+                        "a-very-long-project-name-that-keeps-going-fhqzgkdlwbxmtnrpyavcsoeiuj",
+                    sizeBytes: 0,
+                    category: .derivedData,
+                    target: .derivedData(URL(filePath: "/tmp/derived")),
+                    isDeletable: true
+                ),
+                isSelected: isSelected,
+                onSelectionChange: { isSelected = $0 }
+            )
+        }
+        .frame(width: 420, height: 120)
     }
 #endif

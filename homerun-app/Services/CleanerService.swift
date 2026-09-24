@@ -95,6 +95,21 @@ final class CleanerService: SingleFlightRefreshing {
         selectedIdentifiers.remove(item.id)
     }
 
+    func setSelected(_ isSelected: Bool, for item: CleanupItem) {
+        guard item.isDeletable else {
+            return
+        }
+        guard selectedIdentifiers.contains(item.id) != isSelected else {
+            return
+        }
+
+        if isSelected {
+            selectedIdentifiers.insert(item.id)
+        } else {
+            selectedIdentifiers.remove(item.id)
+        }
+    }
+
     func isSelected(_ item: CleanupItem) -> Bool {
         selectedIdentifiers.contains(item.id)
     }
@@ -111,6 +126,15 @@ final class CleanerService: SingleFlightRefreshing {
 
             local.defaultCleanupCategories = CleanupCategory.allCases.filter { categories.contains($0) }
         }
+    }
+
+    func applyCategory(_ category: CleanupCategory, isEnabled: Bool) async {
+        guard categories.contains(category) != isEnabled else {
+            return
+        }
+
+        setCategory(category, isEnabled: isEnabled)
+        await refresh()
     }
 
     func removeSelected() async {

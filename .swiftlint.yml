@@ -64,20 +64,9 @@ disabled_rules: # rule identifiers turned on by default to exclude from running
   - duplicate_imports
 
 excluded: # case-sensitive paths to ignore during linting. Takes precedence over `included`
-  # The models moved into the ChagiLegacy package (NAT-2631); the exclusion follows them so the
-  # coverage this invocation had before the move is preserved exactly.
-  - ChagiLegacy
-  - TypesenseClient
-  - Utilities
-  - ViewModels
+  - .build
   - build
-  - Tools
-  - APIClient
-  - Configuration
-  - Scripts
-  - Domain/KickClient/MockKickClient.swift
-  - KickUITests
-  - KickTV/Configuration
+  - DerivedData
 
 line_length: 150
 
@@ -92,9 +81,6 @@ file_length:
 
 type_name:
     min_length: 4 # only warning
-    # Raised from 40/50. The realtime coordinator types are legitimately long
-    # (`DisabledPersistentRealtimeConnectionCoordinator` is 47) and shortening them
-    # costs more in clarity than the rule buys.
     max_length: # warning and error
         warning: 50
         error: 60
@@ -117,9 +103,9 @@ warning_threshold: 5000
 custom_rules:
     use_of_print:
         name: "Use of print"
-        excluded: "Console.swift"
+        excluded: "AppLog.swift"
         regex: '^[ \t]*print\('
-        message: "Avoid use of print() Use Console.log() instead"
+        message: "Avoid use of print(). Use AppLog.info or AppLog.error instead"
         severity: error
 
     # A leading `!` is easy to miss when skimming, and easier still to lose in a
@@ -140,3 +126,112 @@ custom_rules:
             - keyword
             - parameter
             - typeidentifier
+
+    # The rules below enforce docs/templates/README.md. Each one is a rule that has
+    # a mechanical tell. What has no tell (one derived loadState, no logic in a
+    # view, preview variants) stays with review.
+
+    # A computed `Binding(get:set:)` hides a mutation in its `set` and is rebuilt
+    # on every body pass. Bind `@State` and send the change from `.onChange(of:)`.
+    # See Presentation/PropertyWrappersTemplate.swift.
+    no_hand_built_binding:
+        name: "Hand-built Binding"
+        regex: '\bBinding\s*\(\s*get\s*:'
+        message: "Bind @State (this view owns it) or @Binding (the parent owns it) and react with .onChange(of:)"
+        severity: error
+        excluded_match_kinds:
+            - comment
+            - doccomment
+            - string
+
+    # `@State` filled from an init only takes the first value. `@Previewable @State`
+    # in a #Preview is the one place it cannot be private.
+    private_state:
+        name: "Non-private @State"
+        regex: '(?<!@Previewable[ \t]{1,4})@(State|FocusState)[ \t]+(var|let|internal|public|fileprivate)\b'
+        message: "@State and @FocusState belong to this view. Make them private and initialise them inline"
+        severity: error
+        excluded_match_kinds:
+            - comment
+            - doccomment
+            - string
+
+    # A private @Binding makes the memberwise init private, so the parent cannot pass `$value`.
+    non_private_binding:
+        name: "Private @Binding"
+        regex: '@Binding[ \t]+private\b'
+        message: "@Binding is set by the parent through the memberwise init. Leave it internal"
+        severity: error
+        excluded_match_kinds:
+            - comment
+            - doccomment
+            - string
+
+    # Settings specific to one Mac go through SettingsService, which owns UserDefaults.
+    no_view_storage:
+        name: "Storage wrapper in a view"
+        regex: '@(AppStorage|SceneStorage)\b'
+        message: "Read and write settings through their service, not @AppStorage / @SceneStorage"
+        severity: error
+        excluded_match_kinds:
+            - comment
+            - doccomment
+            - string
+
+    no_legacy_observation:
+        name: "ObservableObject"
+        regex: '\bObservableObject\b|@Published\b|\bclass[ \t]+\w+ViewModel\b'
+        message: "State lives in a @MainActor @Observable final class *Service. No ObservableObject, @Published or view models"
+        severity: error
+        excluded_match_kinds:
+            - comment
+            - doccomment
+            - string
+
+    # Bridges to NSSplitView and does not pass invalidation to its children. See CLAUDE.md.
+    no_hsplitview:
+        name: "HSplitView"
+        regex: '\bHSplitView\b'
+        message: "Use HStack + Divider. HSplitView leaves rows half-drawn"
+        severity: error
+        excluded_match_kinds:
+            - comment
+            - doccomment
+            - string
+
+    # Stop presenting after first use when stacked with a screen's sheets. See CLAUDE.md.
+    no_file_importer:
+        name: "fileImporter / fileExporter"
+        regex: '\.file(Importer|Exporter)\s*\('
+        message: "Go through FilePanelPresenting (NSOpenPanel / NSSavePanel)"
+        severity: error
+        excluded_match_kinds:
+            - comment
+            - doccomment
+            - string
+
+    # Domain <- Data <- Services <- Presentation. Only Presentation and App see SwiftUI.
+    no_swiftui_below_presentation:
+        name: "SwiftUI below Presentation"
+        included: '.*/(Domain|Data|Services)/.*\.swift'
+        regex: '^import[ \t]+SwiftUI\b'
+        message: "Domain, Data and Services do not import SwiftUI. Animation and presentation are a view concern"
+        severity: error
+
+    no_xctest:
+        name: "XCTest"
+        regex: '^import[ \t]+XCTest\b'
+        message: "Swift Testing only. @Suite and @Test, no XCTest"
+        severity: error
+
+    # Tests hold and release work with the StubGitClient continuation gate instead.
+    no_sleep_in_tests:
+        name: "Sleep in a test"
+        included: '.*/homerun-appTests/.*\.swift'
+        regex: '\b(Task\.sleep|sleep|usleep)\s*\('
+        message: "No sleep or polling. Use holdSnapshots / waitUntilSnapshotRequested / releaseSnapshots"
+        severity: error
+        excluded_match_kinds:
+            - comment
+            - doccomment
+            - string

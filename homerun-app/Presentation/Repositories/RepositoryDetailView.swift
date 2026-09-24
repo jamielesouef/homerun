@@ -11,6 +11,9 @@ struct RepositoryDetailView: View {
 
     @State private var commits: [GitCommitSummary] = []
     @State private var diff = ""
+    @State private var appendsTimestamp = true
+    @State private var wipCommitPrefix = ""
+    @State private var preferredAccount: String?
 
     // MARK: - Inputs
 
@@ -72,19 +75,24 @@ struct RepositoryDetailView: View {
                 .font(.headline)
 
             ForEach(BranchSyncPolicyUseCase.protectedBranchesPresent(in: repository.snapshot), id: \.self) { branch in
-                Toggle(String(localized: "Allow syncing \(branch)"), isOn: branchSyncBinding(for: branch))
+                BranchSyncToggle(
+                    branch: branch,
+                    isAllowed: BranchSyncPolicyUseCase.isSyncAllowed(branch: branch, in: repository.shared)
+                ) { isAllowed in
+                    setSyncAllowed(isAllowed, branch: branch)
+                }
             }
 
             LabeledContent(String(localized: "WIP commit prefix")) {
                 TextField(
                     AppPreferences.fallbackWIPCommitPrefix,
-                    text: optionalStringBinding(\.wipCommitPrefixOverride)
+                    text: $wipCommitPrefix
                 )
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 200)
             }
 
-            Toggle(String(localized: "Append the time to the commit message"), isOn: timestampBinding)
+            Toggle(String(localized: "Append the time to the commit message"), isOn: $appendsTimestamp)
                 .disabled(settings.preferences.appendsTimestampToWIPCommit == false)
 
             if settings.preferences.appendsTimestampToWIPCommit == false {
@@ -93,7 +101,7 @@ struct RepositoryDetailView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Picker(String(localized: "Preferred GitHub account"), selection: accountBinding) {
+            Picker(String(localized: "Preferred GitHub account"), selection: $preferredAccount) {
                 Text(String(localized: "No preference")).tag(String?.none)
 
                 ForEach(accounts.accounts) { account in
@@ -107,6 +115,24 @@ struct RepositoryDetailView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+        }
+        .onChange(of: repository.shared.omitsTimestampFromWIPCommit, initial: true) {
+            appendsTimestamp = repository.shared.omitsTimestampFromWIPCommit == false
+        }
+        .onChange(of: appendsTimestamp) {
+            setAppendsTimestamp(appendsTimestamp)
+        }
+        .onChange(of: repository.shared.wipCommitPrefixOverride, initial: true) {
+            wipCommitPrefix = repository.shared.wipCommitPrefixOverride ?? ""
+        }
+        .onChange(of: wipCommitPrefix) {
+            setWIPCommitPrefix(wipCommitPrefix)
+        }
+        .onChange(of: repository.shared.preferredGitHubAccount, initial: true) {
+            preferredAccount = repository.shared.preferredGitHubAccount
+        }
+        .onChange(of: preferredAccount) {
+            accounts.associate(preferredAccount, with: repository)
         }
     }
 
@@ -210,46 +236,22 @@ struct RepositoryDetailView: View {
 
     // MARK: - Helpers
 
-    private var timestampBinding: Binding<Bool> {
-        Binding(
-            get: { repository.shared.omitsTimestampFromWIPCommit == false },
-            set: { appendsTimestamp in
-                var shared = repository.shared
-                shared.omitsTimestampFromWIPCommit = appendsTimestamp == false
-                repositories.update(shared)
-            }
-        )
+    private func setAppendsTimestamp(_ appendsTimestamp: Bool) {
+        var shared = repository.shared
+        shared.omitsTimestampFromWIPCommit = appendsTimestamp == false
+        repositories.update(shared)
     }
 
-    private func branchSyncBinding(for branch: String) -> Binding<Bool> {
-        Binding(
-            get: { BranchSyncPolicyUseCase.isSyncAllowed(branch: branch, in: repository.shared) },
-            set: { isAllowed in
-                var shared = repository.shared
-                BranchSyncPolicyUseCase.setSyncAllowed(isAllowed, branch: branch, in: &shared)
-                repositories.update(shared)
-            }
-        )
+    private func setSyncAllowed(_ isAllowed: Bool, branch: String) {
+        var shared = repository.shared
+        BranchSyncPolicyUseCase.setSyncAllowed(isAllowed, branch: branch, in: &shared)
+        repositories.update(shared)
     }
 
-    private func optionalStringBinding(_ keyPath: WritableKeyPath<WorkspaceRepository, String?>) -> Binding<String> {
-        Binding(
-            get: { repository.shared[keyPath: keyPath] ?? "" },
-            set: { newValue in
-                var shared = repository.shared
-                shared[keyPath: keyPath] = newValue.isEmpty ? nil : newValue
-                repositories.update(shared)
-            }
-        )
-    }
-
-    private var accountBinding: Binding<String?> {
-        Binding(
-            get: { repository.shared.preferredGitHubAccount },
-            set: { login in
-                accounts.associate(login, with: repository)
-            }
-        )
+    private func setWIPCommitPrefix(_ prefix: String) {
+        var shared = repository.shared
+        shared.wipCommitPrefixOverride = prefix.isEmpty ? nil : prefix
+        repositories.update(shared)
     }
 }
 

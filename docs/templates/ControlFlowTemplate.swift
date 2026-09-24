@@ -53,7 +53,7 @@ enum ExampleControlFlow {
     // MARK: - 1. Stacked guard
 
     static func firstResolvedURL(for id: String, resolved: [String: URL], isCancelled: Bool) -> URL? {
-        guard isCancelled == false, url = resolved[id] else {
+        guard isCancelled == false, let url = resolved[id] else {
             return nil
         }
 

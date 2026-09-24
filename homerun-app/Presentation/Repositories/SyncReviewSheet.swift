@@ -13,6 +13,10 @@ struct SyncReviewSheet: View {
     @Environment(\.syncService) private var sync
     @Environment(\.settingsService) private var settings
 
+    // MARK: - State
+
+    @State private var requiresSyncConfirmation = AppPreferences.default.requiresSyncConfirmation
+
     // MARK: - View
 
     var body: some View {
@@ -25,6 +29,12 @@ struct SyncReviewSheet: View {
         }
         .padding(AppSpacing.large)
         .frame(width: Constants.width, height: Constants.height)
+        .onChange(of: settings.preferences.requiresSyncConfirmation, initial: true) {
+            requiresSyncConfirmation = settings.preferences.requiresSyncConfirmation
+        }
+        .onChange(of: requiresSyncConfirmation) {
+            settings.updatePreferences { $0.requiresSyncConfirmation = requiresSyncConfirmation }
+        }
     }
 
     // MARK: - Header
@@ -48,10 +58,8 @@ struct SyncReviewSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.regular) {
                     ForEach(plan.steps) { step in
-                        SyncPlanStepView(step: step) { path in
-                            sync.toggleUntracked(path, for: step.identifier)
-                        } isSelected: { path in
-                            sync.isUntrackedSelected(path, for: step.identifier)
+                        SyncPlanStepView(step: step) { path, isSelected in
+                            sync.setUntracked(path, isSelected: isSelected, for: step.identifier)
                         }
                     }
                 }
@@ -65,7 +73,7 @@ struct SyncReviewSheet: View {
 
     private var footer: some View {
         HStack {
-            Toggle(String(localized: "Ask me every time"), isOn: confirmationBinding)
+            Toggle(String(localized: "Ask me every time"), isOn: $requiresSyncConfirmation)
                 .toggleStyle(.checkbox)
 
             Spacer()
@@ -84,17 +92,6 @@ struct SyncReviewSheet: View {
             .keyboardShortcut(.defaultAction)
             .disabled(sync.reviewPlan?.isEmpty != false)
         }
-    }
-
-    // MARK: - Helpers
-
-    private var confirmationBinding: Binding<Bool> {
-        Binding(
-            get: { settings.preferences.requiresSyncConfirmation },
-            set: { isOn in
-                settings.updatePreferences { $0.requiresSyncConfirmation = isOn }
-            }
-        )
     }
 }
 

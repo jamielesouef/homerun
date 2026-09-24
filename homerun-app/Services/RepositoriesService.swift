@@ -112,6 +112,10 @@ final class RepositoriesService: SingleFlightRefreshing {
     }
 
     func update(_ repository: WorkspaceRepository) {
+        guard self.repository(identifier: repository.identifier)?.shared != repository else {
+            return
+        }
+
         store { () throws(PersistenceError) in
             try sharedStore.upsert(repository)
         }
@@ -148,8 +152,8 @@ final class RepositoriesService: SingleFlightRefreshing {
         return .added
     }
 
-    func dismissScanDecision() {
-        guard foldersAwaitingScanDecision.isEmpty == false else {
+    func dismissScanDecision(for folder: URL) {
+        guard foldersAwaitingScanDecision.first == folder else {
             return
         }
 

@@ -1,10 +1,14 @@
 import SwiftUI
 
 struct ResumeStepRow: View {
+    // MARK: - State
+
+    @State private var isSelected = false
+
     // MARK: - Inputs
 
     let step: ResumeStep
-    @Binding var isSelected: Bool
+    let onSelectionChange: (Bool) -> Void
 
     // MARK: - View
 
@@ -38,6 +42,12 @@ struct ResumeStepRow: View {
         }
         .padding(AppSpacing.medium)
         .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: AppSpacing.small))
+        .onChange(of: step.isSelected, initial: true) {
+            isSelected = step.isSelected
+        }
+        .onChange(of: isSelected) {
+            onSelectionChange(isSelected)
+        }
     }
 }
 
@@ -52,7 +62,7 @@ struct ResumeStepRow: View {
                     handoff: RepositoryHandoff(branch: "feature/login", commit: "abc1234def", recordedAt: .now),
                     isSelected: true
                 ),
-                isSelected: .constant(true)
+                onSelectionChange: { _ in }
             )
             ResumeStepRow(
                 step: ResumeStep(
@@ -62,7 +72,7 @@ struct ResumeStepRow: View {
                     handoff: nil,
                     isSelected: true
                 ),
-                isSelected: .constant(true)
+                onSelectionChange: { _ in }
             )
             ResumeStepRow(
                 step: ResumeStep(
@@ -72,7 +82,7 @@ struct ResumeStepRow: View {
                     handoff: nil,
                     isSelected: false
                 ),
-                isSelected: .constant(false)
+                onSelectionChange: { _ in }
             )
         }
         .padding()

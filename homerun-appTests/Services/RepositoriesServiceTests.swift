@@ -152,11 +152,11 @@ struct RepositoriesServiceTests {
 
         #expect(harness.repositories.foldersAwaitingScanDecision == [first, second])
 
-        harness.repositories.dismissScanDecision()
+        harness.repositories.dismissScanDecision(for: first)
 
         #expect(harness.repositories.folderAwaitingScanDecision == second)
 
-        harness.repositories.dismissScanDecision()
+        harness.repositories.dismissScanDecision(for: second)
 
         #expect(harness.repositories.folderAwaitingScanDecision == nil)
     }

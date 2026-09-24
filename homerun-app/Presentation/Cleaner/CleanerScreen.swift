@@ -48,8 +48,14 @@ struct CleanerScreen: View {
     private var categoryPicker: some View {
         HStack(spacing: AppSpacing.regular) {
             ForEach(CleanupCategory.allCases) { category in
-                Toggle(category.title, isOn: categoryBinding(category))
-                    .toggleStyle(.checkbox)
+                CleanupCategoryToggle(
+                    category: category,
+                    isEnabled: cleaner.categories.contains(category)
+                ) { isEnabled in
+                    Task {
+                        await cleaner.applyCategory(category, isEnabled: isEnabled)
+                    }
+                }
             }
 
             Spacer()
@@ -76,8 +82,8 @@ struct CleanerScreen: View {
         case let .loaded(items):
             List {
                 ForEach(items) { item in
-                    CleanupItemRow(item: item, isSelected: cleaner.isSelected(item)) {
-                        cleaner.toggle(item)
+                    CleanupItemRow(item: item, isSelected: cleaner.isSelected(item)) { isSelected in
+                        cleaner.setSelected(isSelected, for: item)
                     }
                 }
             }
@@ -112,21 +118,6 @@ struct CleanerScreen: View {
             .disabled(cleaner.plan.isEmpty || cleaner.isRemoving)
         }
         .padding(AppSpacing.regular)
-    }
-
-    // MARK: - Helpers
-
-    private func categoryBinding(_ category: CleanupCategory) -> Binding<Bool> {
-        Binding(
-            get: { cleaner.categories.contains(category) },
-            set: { isEnabled in
-                cleaner.setCategory(category, isEnabled: isEnabled)
-
-                Task {
-                    await cleaner.refresh()
-                }
-            }
-        )
     }
 }
 

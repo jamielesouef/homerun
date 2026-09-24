@@ -8,14 +8,23 @@ struct CleanerSettingsSection: View {
     @Environment(\.cleanerService) private var cleaner
     @Environment(\.filePanel) private var filePanel
 
+    // MARK: - State
+
+    @State private var includesDefaultDerivedData = LocalSettings.default.includesDefaultDerivedData
+
     // MARK: - View
 
     var body: some View {
         Section(String(localized: "Cleaner")) {
-            Toggle(String(localized: "Include the default Derived Data location"), isOn: defaultLocationBinding)
+            Toggle(String(localized: "Include the default Derived Data location"), isOn: $includesDefaultDerivedData)
 
             ForEach(CleanupCategory.allCases) { category in
-                Toggle(String(localized: "Show \(category.title) in the review"), isOn: categoryBinding(category))
+                MirroredToggle(
+                    title: String(localized: "Show \(category.title) in the review"),
+                    value: cleaner.categories.contains(category)
+                ) { isEnabled in
+                    cleaner.setCategory(category, isEnabled: isEnabled)
+                }
             }
 
             LabeledContent(String(localized: "Extra Derived Data paths")) {
@@ -41,6 +50,12 @@ struct CleanerSettingsSection: View {
                 }
             }
         }
+        .onChange(of: settings.localSettings.includesDefaultDerivedData, initial: true) {
+            includesDefaultDerivedData = settings.localSettings.includesDefaultDerivedData
+        }
+        .onChange(of: includesDefaultDerivedData) {
+            settings.updateLocalSettings { $0.includesDefaultDerivedData = includesDefaultDerivedData }
+        }
     }
 
     private func addDerivedDataPath() {
@@ -59,22 +74,6 @@ struct CleanerSettingsSection: View {
 
             local.additionalDerivedDataPaths.append(path)
         }
-    }
-
-    // MARK: - Helpers
-
-    private var defaultLocationBinding: Binding<Bool> {
-        Binding(
-            get: { settings.localSettings.includesDefaultDerivedData },
-            set: { value in settings.updateLocalSettings { $0.includesDefaultDerivedData = value } }
-        )
-    }
-
-    private func categoryBinding(_ category: CleanupCategory) -> Binding<Bool> {
-        Binding(
-            get: { cleaner.categories.contains(category) },
-            set: { cleaner.setCategory(category, isEnabled: $0) }
-        )
     }
 }
 

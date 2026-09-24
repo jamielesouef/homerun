@@ -5,14 +5,21 @@ struct RepositorySettingsSection: View {
 
     @Environment(\.settingsService) private var settings
 
+    // MARK: - State
+
+    @State private var requiresSyncConfirmation = AppPreferences.default.requiresSyncConfirmation
+    @State private var wipCommitPrefix = AppPreferences.default.wipCommitPrefix
+    @State private var appendsTimestamp = AppPreferences.default.appendsTimestampToWIPCommit
+    @State private var sortOrder = AppPreferences.default.repositorySortOrder
+
     // MARK: - View
 
     var body: some View {
         Section(String(localized: "Repositories")) {
-            Toggle(String(localized: "Ask me to confirm before syncing"), isOn: confirmationBinding)
+            Toggle(String(localized: "Ask me to confirm before syncing"), isOn: $requiresSyncConfirmation)
 
             LabeledContent(String(localized: "WIP commit prefix")) {
-                TextField(AppPreferences.fallbackWIPCommitPrefix, text: prefixBinding)
+                TextField(AppPreferences.fallbackWIPCommitPrefix, text: $wipCommitPrefix)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 200)
             }
@@ -21,44 +28,38 @@ struct RepositorySettingsSection: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Toggle(String(localized: "Append the time to WIP commit messages"), isOn: timestampBinding)
+            Toggle(String(localized: "Append the time to WIP commit messages"), isOn: $appendsTimestamp)
 
-            Picker(String(localized: "Default sort order"), selection: sortBinding) {
+            Picker(String(localized: "Default sort order"), selection: $sortOrder) {
                 ForEach(RepositorySortOrder.allCases) { order in
                     Text(order.title).tag(order)
                 }
             }
         }
-    }
-
-    // MARK: - Helpers
-
-    private var confirmationBinding: Binding<Bool> {
-        Binding(
-            get: { settings.preferences.requiresSyncConfirmation },
-            set: { value in settings.updatePreferences { $0.requiresSyncConfirmation = value } }
-        )
-    }
-
-    private var prefixBinding: Binding<String> {
-        Binding(
-            get: { settings.preferences.wipCommitPrefix },
-            set: { value in settings.updatePreferences { $0.wipCommitPrefix = value } }
-        )
-    }
-
-    private var timestampBinding: Binding<Bool> {
-        Binding(
-            get: { settings.preferences.appendsTimestampToWIPCommit },
-            set: { value in settings.updatePreferences { $0.appendsTimestampToWIPCommit = value } }
-        )
-    }
-
-    private var sortBinding: Binding<RepositorySortOrder> {
-        Binding(
-            get: { settings.preferences.repositorySortOrder },
-            set: { value in settings.updatePreferences { $0.repositorySortOrder = value } }
-        )
+        .onChange(of: settings.preferences.requiresSyncConfirmation, initial: true) {
+            requiresSyncConfirmation = settings.preferences.requiresSyncConfirmation
+        }
+        .onChange(of: requiresSyncConfirmation) {
+            settings.updatePreferences { $0.requiresSyncConfirmation = requiresSyncConfirmation }
+        }
+        .onChange(of: settings.preferences.wipCommitPrefix, initial: true) {
+            wipCommitPrefix = settings.preferences.wipCommitPrefix
+        }
+        .onChange(of: wipCommitPrefix) {
+            settings.updatePreferences { $0.wipCommitPrefix = wipCommitPrefix }
+        }
+        .onChange(of: settings.preferences.appendsTimestampToWIPCommit, initial: true) {
+            appendsTimestamp = settings.preferences.appendsTimestampToWIPCommit
+        }
+        .onChange(of: appendsTimestamp) {
+            settings.updatePreferences { $0.appendsTimestampToWIPCommit = appendsTimestamp }
+        }
+        .onChange(of: settings.preferences.repositorySortOrder, initial: true) {
+            sortOrder = settings.preferences.repositorySortOrder
+        }
+        .onChange(of: sortOrder) {
+            settings.updatePreferences { $0.repositorySortOrder = sortOrder }
+        }
     }
 }
 

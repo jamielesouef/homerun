@@ -19,7 +19,13 @@ struct RepositoriesScreen: View {
 
     @State private var selection: Set<String> = []
     @State private var discovered: [DiscoveredRepository] = []
+    @State private var isShowingDiscovered = false
     @State private var pendingRemoval: RepositoryRemoval?
+    @State private var filter: RepositoryStatusFilter = .all
+    @State private var sortOrder: RepositorySortOrder = .name
+    @State private var searchText = ""
+    @State private var scanPromptFolder: URL?
+    @State private var isShowingScanPrompt = false
 
     // MARK: - View
 
@@ -48,14 +54,14 @@ struct RepositoriesScreen: View {
         }
         .toolbar {
             ToolbarItemGroup {
-                Picker(String(localized: "Filter"), selection: filterBinding) {
+                Picker(String(localized: "Filter"), selection: $filter) {
                     ForEach(RepositoryStatusFilter.allCases) { filter in
                         Text(filter.title).tag(filter)
                     }
                 }
                 .pickerStyle(.menu)
 
-                Picker(String(localized: "Sort"), selection: sortBinding) {
+                Picker(String(localized: "Sort"), selection: $sortOrder) {
                     ForEach(RepositorySortOrder.allCases) { order in
                         Text(order.title).tag(order)
                     }
@@ -73,9 +79,9 @@ struct RepositoriesScreen: View {
                 }
             }
         }
-        .searchable(text: searchBinding)
+        .searchable(text: $searchText)
         .syncFlow()
-        .sheet(isPresented: discoveredBinding) {
+        .sheet(isPresented: $isShowingDiscovered) {
             DiscoveredRepositoriesSheet(discovered: discovered) { chosen in
                 discovered = []
 
@@ -88,9 +94,9 @@ struct RepositoriesScreen: View {
         }
         .confirmationDialog(
             String(localized: "Not a git repository"),
-            isPresented: scanPromptBinding,
+            isPresented: $isShowingScanPrompt,
             titleVisibility: .visible,
-            presenting: repositories.folderAwaitingScanDecision
+            presenting: scanPromptFolder
         ) { folder in
             Button(String(localized: "Search for repositories")) {
                 Task {
@@ -115,6 +121,45 @@ struct RepositoriesScreen: View {
                 },
                 secondaryButton: .cancel()
             )
+        }
+        .onChange(of: repositories.filter, initial: true) {
+            filter = repositories.filter
+        }
+        .onChange(of: filter) {
+            repositories.filter = filter
+        }
+        .onChange(of: repositories.sortOrder, initial: true) {
+            sortOrder = repositories.sortOrder
+        }
+        .onChange(of: sortOrder) {
+            repositories.sortOrder = sortOrder
+        }
+        .onChange(of: repositories.searchText, initial: true) {
+            searchText = repositories.searchText
+        }
+        .onChange(of: searchText) {
+            repositories.searchText = searchText
+        }
+        .onChange(of: discovered) {
+            isShowingDiscovered = discovered.isEmpty == false
+        }
+        .onChange(of: isShowingDiscovered) {
+            guard isShowingDiscovered == false else {
+                return
+            }
+
+            discovered = []
+        }
+        .onChange(of: repositories.folderAwaitingScanDecision, initial: true) {
+            scanPromptFolder = repositories.folderAwaitingScanDecision
+            isShowingScanPrompt = scanPromptFolder != nil
+        }
+        .onChange(of: isShowingScanPrompt) {
+            guard isShowingScanPrompt == false, let scanPromptFolder else {
+                return
+            }
+
+            repositories.dismissScanDecision(for: scanPromptFolder)
         }
     }
 
@@ -231,44 +276,6 @@ struct RepositoriesScreen: View {
     }
 
     // MARK: - Helpers
-
-    private var filterBinding: Binding<RepositoryStatusFilter> {
-        Binding(get: { repositories.filter }, set: { repositories.filter = $0 })
-    }
-
-    private var sortBinding: Binding<RepositorySortOrder> {
-        Binding(get: { repositories.sortOrder }, set: { repositories.sortOrder = $0 })
-    }
-
-    private var searchBinding: Binding<String> {
-        Binding(get: { repositories.searchText }, set: { repositories.searchText = $0 })
-    }
-
-    private var scanPromptBinding: Binding<Bool> {
-        Binding(
-            get: { repositories.folderAwaitingScanDecision != nil },
-            set: { isPresented in
-                guard isPresented == false else {
-                    return
-                }
-
-                repositories.dismissScanDecision()
-            }
-        )
-    }
-
-    private var discoveredBinding: Binding<Bool> {
-        Binding(
-            get: { discovered.isEmpty == false },
-            set: { isPresented in
-                guard isPresented == false else {
-                    return
-                }
-
-                discovered = []
-            }
-        )
-    }
 
     private func addRepository() {
         guard let url = filePanel.chooseFolder(message: String(localized: "Choose a git repository to track")) else {
