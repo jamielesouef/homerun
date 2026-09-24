@@ -5,7 +5,7 @@
 // - `@MainActor @Observable final class`. A SERVICE, not a ViewModel:
 //   `class *ViewModel`, `ObservableObject` and `@Published` do not appear in
 //   new code.
-// - Sole writer of its own state. Every stored flag is `private`; the view
+// - Sole writer of its own state. Every loading flag is `private`; the view
 //   sees ONE derived `loadState`, switched on exhaustively. The derivation
 //   is a `switch` over a tuple of the raw flags so every case's full
 //   precondition is on its own line and the compiler checks exhaustiveness.
@@ -17,6 +17,10 @@
 //   only `performRefresh()`, and checks `Task.isCancelled` after the await
 //   so a superseded task never overwrites a newer result. Fetch into a
 //   local, guard, then assign.
+// - A preference the view edits is `private(set)` with a setter intent that
+//   is a no-op for an unchanged value, so a view that mirrors it into
+//   `@State` and writes back from `.onChange(of:)` cannot loop
+//   (Presentation/PropertyWrappersTemplate.swift).
 // - `start()` is idempotent; a view's `.task` can call it on every
 //   appearance. `refresh()` (from the protocol) is the explicit reload.
 // - Injection: concrete service through an `@Entry` key with a hoisted real
@@ -49,6 +53,10 @@ final class ExampleFeatureService: SingleFlightRefreshing {
         }
     }
 
+    // MARK: - Preferences
+
+    private(set) var showsLikeCounts = true
+
     // MARK: - SingleFlightRefreshing
 
     var refreshTask: Task<Void, Never>?
@@ -77,6 +85,14 @@ final class ExampleFeatureService: SingleFlightRefreshing {
 
         hasStarted = true
         await refresh()
+    }
+
+    func setShowsLikeCounts(_ value: Bool) {
+        guard value != showsLikeCounts else {
+            return
+        }
+
+        showsLikeCounts = value
     }
 
     // MARK: - SingleFlightRefreshing

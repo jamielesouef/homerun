@@ -40,6 +40,8 @@ change every template that calls it.
 | Presentation | `Presentation/EnvironmentKeyTemplate.swift` | wiring a service into `@Environment` |
 | Presentation | `Presentation/ScreenTemplate.swift` | a screen: `.task` starts the service, `switch loadState` renders it |
 | Presentation | `Presentation/ViewTemplate.swift` | a leaf view with props and an action closure |
+| Presentation | `Presentation/PropertyWrappersTemplate.swift` | choosing `@State`, `@Binding`, `@Environment`, `@Bindable`, `@FocusState`, and the `@Observable` / `@Entry` / `#Preview` macros. A control whose change is a service intent: `@State` + `.onChange(of:)`, never `Binding(get:set:)` |
+| Presentation | `Presentation/BindingTemplate.swift` | a leaf view that edits a value its parent owns, previewed with `@Previewable @State` |
 | Presentation | `Presentation/ViewModifierTemplate.swift` | behaviour reused across unrelated views, as a `ViewModifier` + `extension View` pair |
 | Presentation | `Presentation/MoveCommandMappingTemplate.swift` | mapping a SwiftUI-only value to the domain's own enum at the view boundary |
 | Utilities | `Utilities/SharedConstantsTemplate.swift`, `Utilities/LogTemplate.swift` | **once per app.** Design tokens and the one logging call |
@@ -126,9 +128,11 @@ template.
     `@Binding` → `private let` dependencies → `let` / `var` inputs and
     closures → `body` → subviews → helpers.
 20. **A view holds no logic.** It reads service state, calls a use case, and
-    applies the result. A computed `Binding` whose `set` does anything beyond
-    storing the value is a hidden mutation. Bind the real state and react
-    with `.onChange(of:)`.
+    applies the result. No computed `Binding(get:set:)`. Pick the wrapper by
+    who owns the value: `@State` if this view does, `@Binding` if the parent
+    does. A change that is a service intent binds to `@State` and is sent
+    from `.onChange(of:)`. No `@AppStorage` in a view; machine-local settings
+    go through their service.
 21. **Every view ships a `#Preview` inside `#if DEBUG`**, with the empty,
     long-text and no-image variants, not only the happy path.
 22. **One `@Entry` shape.** A concrete `@Observable` service gets an `@Entry`
