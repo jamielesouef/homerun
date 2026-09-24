@@ -203,6 +203,57 @@
 
         // MARK: - Helpers
 
+        static let repositoryWithWorktrees = repositoryWithWorktrees(
+            worktrees: [
+                worktree("feature+login", branch: "feature/login", dirty: true),
+                worktree("hotfix", branch: "hotfix/crash")
+            ]
+        )
+
+        static func repositoryWithWorktrees(worktrees: [TrackedRepository]) -> TrackedRepository {
+            WorktreeUseCase.linking(
+                TrackedRepository(
+                    shared: sampleRepositories[0],
+                    localPath: URL(filePath: "/Users/preview/Developer/app"),
+                    snapshot: snapshot(branch: "main")
+                ),
+                to: worktrees
+            )
+        }
+
+        static func worktree(
+            _ name: String,
+            branch: String?,
+            dirty: Bool = false,
+            readable: Bool = true
+        ) -> TrackedRepository {
+            let path = URL(filePath: "/Users/preview/Developer/app/.claude/worktrees/\(name)")
+
+            let worktree = GitWorktree(
+                path: path,
+                headCommit: "def5678",
+                branch: branch,
+                isMain: false,
+                isBare: false,
+                isLocked: false,
+                isPrunable: false
+            )
+
+            return TrackedRepository(
+                shared: sampleRepositories[0],
+                localPath: path,
+                snapshot: readable
+                    ? snapshot(
+                        branch: branch,
+                        tracked: dirty ? [GitFileChange(path: "Sources/Login.swift", status: .modified)] : [],
+                        untracked: dirty ? ["Notes.md"] : []
+                    )
+                    : nil,
+                readError: readable ? nil : .notARepository(path.path(percentEncoded: false)),
+                worktree: worktree
+            )
+        }
+
         static func snapshot(
             branch: String?,
             ahead: Int = 0,

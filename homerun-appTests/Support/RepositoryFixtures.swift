@@ -70,6 +70,39 @@ enum RepositoryFixtures {
         )
     }
 
+    static func gitWorktree(
+        _ path: String,
+        branch: String? = "feature/login",
+        isMain: Bool = false,
+        isBare: Bool = false,
+        isPrunable: Bool = false
+    ) -> GitWorktree {
+        GitWorktree(
+            path: URL(filePath: path),
+            headCommit: "def5678",
+            branch: branch,
+            isMain: isMain,
+            isBare: isBare,
+            isLocked: false,
+            isPrunable: isPrunable
+        )
+    }
+
+    static func worktree(
+        _ path: String = "/Users/jamie/Developer/app-login",
+        of identifier: String = "remote:github.com/acme/app",
+        snapshot: GitRepositorySnapshot? = nil
+    ) -> TrackedRepository {
+        let worktree = gitWorktree(path, branch: snapshot?.currentBranch ?? "feature/login")
+
+        return TrackedRepository(
+            shared: shared(identifier),
+            localPath: worktree.path,
+            snapshot: snapshot,
+            worktree: worktree
+        )
+    }
+
     static func failure(_ identifier: String = "remote:github.com/acme/app") -> RepositorySyncOutcome {
         RepositorySyncOutcome(identifier: identifier, result: .failed(.diverged), finishedAt: .distantPast)
     }

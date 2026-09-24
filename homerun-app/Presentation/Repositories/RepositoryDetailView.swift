@@ -6,6 +6,7 @@ struct RepositoryDetailView: View {
     @Environment(\.repositoriesService) private var repositories
     @Environment(\.accountsService) private var accounts
     @Environment(\.settingsService) private var settings
+    @Environment(\.syncService) private var sync
 
     // MARK: - State
 
@@ -14,6 +15,7 @@ struct RepositoryDetailView: View {
     @State private var appendsTimestamp = true
     @State private var wipCommitPrefix = ""
     @State private var preferredAccount: String?
+    @State private var selectedCheckoutID: String?
 
     // MARK: - Inputs
 
@@ -33,10 +35,14 @@ struct RepositoryDetailView: View {
             .padding(AppSpacing.large)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .task(id: repository.id) {
-            commits = await repositories.recentCommits(for: repository, limit: AppConstants.recentCommitLimit)
-            diff = await repositories.diffSummary(for: repository)
-            await repositories.evaluateReadiness(for: repository, checksRemoteTags: false)
+        .task(id: checkout.id) {
+            let checkout = checkout
+            commits = await repositories.recentCommits(for: checkout, limit: AppConstants.recentCommitLimit)
+            diff = await repositories.diffSummary(for: checkout)
+            await repositories.evaluateReadiness(for: checkout, checksRemoteTags: false)
+        }
+        .onChange(of: repository.id) {
+            selectedCheckoutID = nil
         }
         .task {
             await accounts.start()
@@ -51,18 +57,46 @@ struct RepositoryDetailView: View {
                 .font(.largeTitle.weight(.semibold))
                 .lineLimit(2)
 
-            RepositoryStatusBadge(status: repository.status)
+            if repository.worktrees.isEmpty == false {
+                CheckoutPicker(selection: $selectedCheckoutID, repository: repository)
+                    .padding(.vertical, AppSpacing.small)
+            }
 
-            Text(repository.localPath?.path(percentEncoded: false) ?? String(localized: "Not cloned on this Mac"))
+            RepositoryStatusBadge(status: checkout.status)
+
+            Text(checkout.localPath?.path(percentEncoded: false) ?? String(localized: "Not cloned on this Mac"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
 
-            if let remote = repository.snapshot?.remoteURL ?? repository.shared.remoteURL {
+            if let remote = checkout.snapshot?.remoteURL ?? repository.shared.remoteURL {
                 Text(remote)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
+            }
+
+            syncButtons
+                .padding(.top, AppSpacing.small)
+        }
+    }
+
+    private var syncButtons: some View {
+        HStack(spacing: AppSpacing.small) {
+            Button(WorktreeUseCase.syncTitle(for: checkout, in: repository)) {
+                Task {
+                    await sync.review(identifiers: [checkout.id], includesWorktrees: false)
+                }
+            }
+            .disabled(checkout.isCloned == false)
+
+            if repository.worktrees.isEmpty == false {
+                Button(String(localized: "Sync with all worktrees")) {
+                    Task {
+                        await sync.review(identifiers: [repository.id], includesWorktrees: true)
+                    }
+                }
+                .disabled(repository.isCloned == false)
             }
         }
     }
@@ -140,7 +174,7 @@ struct RepositoryDetailView: View {
 
     @ViewBuilder
     private var changes: some View {
-        if let snapshot = repository.snapshot {
+        if let snapshot = checkout.snapshot {
             VStack(alignment: .leading, spacing: AppSpacing.small) {
                 Text(String(localized: "Changes"))
                     .font(.headline)
@@ -181,7 +215,7 @@ struct RepositoryDetailView: View {
 
     @ViewBuilder
     private var readiness: some View {
-        if let report = repositories.readinessReports[repository.id] {
+        if let report = repositories.readinessReports[checkout.id] {
             VStack(alignment: .leading, spacing: AppSpacing.small) {
                 Text(String(localized: "Ready to resume elsewhere"))
                     .font(.headline)
@@ -236,6 +270,10 @@ struct RepositoryDetailView: View {
 
     // MARK: - Helpers
 
+    private var checkout: TrackedRepository {
+        WorktreeUseCase.checkout(in: repository, selectedIdentifier: selectedCheckoutID)
+    }
+
     private func setAppendsTimestamp(_ appendsTimestamp: Bool) {
         var shared = repository.shared
         shared.omitsTimestampFromWIPCommit = appendsTimestamp == false
@@ -272,6 +310,14 @@ struct RepositoryDetailView: View {
         .environment(\.repositoriesService, PreviewGraph.populated.repositories)
         .environment(\.accountsService, PreviewGraph.populated.accounts)
         .frame(width: 620, height: 640)
+    }
+
+    #Preview("With worktrees") {
+        RepositoryDetailView(repository: PreviewGraph.repositoryWithWorktrees)
+            .environment(\.repositoriesService, PreviewGraph.populated.repositories)
+            .environment(\.accountsService, PreviewGraph.populated.accounts)
+            .environment(\.syncService, PreviewGraph.populated.sync)
+            .frame(width: 620, height: 720)
     }
 
     #Preview("Not cloned") {

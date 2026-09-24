@@ -51,6 +51,10 @@ final class RepositoriesService: SingleFlightRefreshing {
         )
     }
 
+    var allCheckouts: [TrackedRepository] {
+        repositories.flatMap(\.allCheckouts)
+    }
+
     var todaySummary: TodaySummary {
         TodaySummaryUseCase.summary(for: repositories, readiness: readinessReports)
     }
@@ -65,6 +69,7 @@ final class RepositoriesService: SingleFlightRefreshing {
     private let gitClient: any GitClienting
     private let discovery: any RepositoryDiscovering
     private let readinessChecker: any ReadinessChecking
+    private let worktreeReader: TrackedWorktreeReader
     private let fileManager: FileManager
     private let clock: any Clocking
     private let settings: SettingsService
@@ -89,6 +94,7 @@ final class RepositoriesService: SingleFlightRefreshing {
         self.gitClient = gitClient
         self.discovery = discovery
         self.readinessChecker = readinessChecker
+        worktreeReader = TrackedWorktreeReader(gitClient: gitClient)
         self.fileManager = fileManager
         self.clock = clock
         self.settings = settings
@@ -108,11 +114,11 @@ final class RepositoriesService: SingleFlightRefreshing {
     }
 
     func repository(identifier: String) -> TrackedRepository? {
-        repositories.first { $0.id == identifier }
+        allCheckouts.first { $0.id == identifier }
     }
 
     func update(_ repository: WorkspaceRepository) {
-        guard self.repository(identifier: repository.identifier)?.shared != repository else {
+        guard repositories.first(where: { $0.id == repository.identifier })?.shared != repository else {
             return
         }
 
@@ -124,30 +130,25 @@ final class RepositoriesService: SingleFlightRefreshing {
             return
         }
 
-        let existing = repositories[index]
-        repositories[index] = TrackedRepository(
-            shared: repository,
-            localPath: existing.localPath,
-            snapshot: existing.snapshot,
-            lastSyncOutcome: existing.lastSyncOutcome,
-            readError: existing.readError,
-            isLoadingSnapshot: existing.isLoadingSnapshot
-        )
+        repositories[index] = repositories[index].replacingShared(repository)
     }
 
     @discardableResult
     func addRepository(at url: URL) async -> RepositoryAddOutcome {
-        let standardised = url.standardizedFileURL
+        let dropped = url.standardizedFileURL
 
-        guard await gitClient.isRepository(at: standardised) else {
-            if foldersAwaitingScanDecision.contains(standardised) == false {
-                foldersAwaitingScanDecision.append(standardised)
+        guard await gitClient.isRepository(at: dropped) else {
+            if foldersAwaitingScanDecision.contains(dropped) == false {
+                foldersAwaitingScanDecision.append(dropped)
             }
 
-            return .notARepository(standardised)
+            return .notARepository(dropped)
         }
 
-        await add([DiscoveredRepository(url: standardised)])
+        let listed = await (try? gitClient.worktrees(at: dropped)) ?? []
+        let mainCheckout = WorktreeUseCase.mainCheckout(for: dropped.resolvingSymlinksInPath(), in: listed)
+
+        await add([DiscoveredRepository(url: mainCheckout?.standardizedFileURL ?? dropped)])
 
         return .added
     }
@@ -430,13 +431,16 @@ private extension RepositoriesService {
 
         do {
             let snapshot = try await gitClient.snapshot(at: directory)
+            let worktrees = await worktreeReader.worktrees(of: repository, at: directory, outcomes: outcomes)
 
-            return TrackedRepository(
+            let main = TrackedRepository(
                 shared: repository,
                 localPath: directory,
                 snapshot: snapshot,
                 lastSyncOutcome: outcome
             )
+
+            return WorktreeUseCase.linking(main, to: worktrees)
         } catch {
             return TrackedRepository(
                 shared: repository,

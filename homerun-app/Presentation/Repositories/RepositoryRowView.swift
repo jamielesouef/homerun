@@ -36,6 +36,10 @@ struct RepositoryRowView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            if repository.worktrees.isEmpty == false {
+                LinkedWorktreesView(worktrees: repository.worktrees)
+            }
         }
         .padding(.vertical, AppSpacing.xsmall)
     }
@@ -81,6 +85,13 @@ struct RepositoryRowView: View {
             RepositoryRowView(repository: TrackedRepository(shared: PreviewGraph.sampleRepositories[2]))
         }
         .frame(width: 320, height: 240)
+    }
+
+    #Preview("With worktrees") {
+        List {
+            RepositoryRowView(repository: PreviewGraph.repositoryWithWorktrees)
+        }
+        .frame(width: 340, height: 180)
     }
 
     #Preview("Still being read") {

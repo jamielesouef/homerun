@@ -8,6 +8,7 @@ actor StubGitClient: GitClienting {
     var repositoryPaths: Set<String> = []
     var snapshots: [String: GitRepositorySnapshot] = [:]
     var snapshotError: GitError?
+    var worktreeLists: [String: [GitWorktree]] = [:]
     var commits: [GitCommitSummary] = []
     var diff = ""
     var stageError: GitError?
@@ -102,6 +103,10 @@ actor StubGitClient: GitClienting {
         knownCommits = commits
     }
 
+    func setWorktrees(_ worktrees: [GitWorktree], at url: URL) {
+        worktreeLists[url.path(percentEncoded: false)] = worktrees
+    }
+
     func setAvailable(_ available: Bool) {
         self.available = available
     }
@@ -141,6 +146,10 @@ actor StubGitClient: GitClienting {
         }
 
         return snapshot
+    }
+
+    func worktrees(at url: URL) async throws(GitError) -> [GitWorktree] {
+        worktreeLists[url.path(percentEncoded: false)] ?? []
     }
 
     func recentCommits(at url: URL, limit: Int) async throws(GitError) -> [GitCommitSummary] {
