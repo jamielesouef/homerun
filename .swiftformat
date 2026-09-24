@@ -1,0 +1,100 @@
+# SwiftFormat baseline
+# Reference: https://github.com/nicklockwood/SwiftFormat/blob/main/Rules.md
+
+# Keep the Swift compiler version and language mode aligned with the project.
+# SwiftFormat uses these values to enable version-specific rules safely.
+# Toolchain
+--swiftversion 6.0
+
+# Paths
+--exclude .build,Build,DerivedData,Pods,Carthage,Generated,Vendor,Utilities/Sources/Utilities/String+Extensions.swift,ChagiLegacy/Sources/ChagiLegacy/Domain/FeatureFlags/FeatureFlag.swift,Utilities/Tests/UtilitiesTests/NSLockingRunTests.swift,Utilities/Tests/UtilitiesTests/GenericErrorTests.swift
+
+# Utilities/Sources/Utilities/String+Extensions.swift is excluded above: redundantSelf strips the
+# `self.` from `self.size(withAttributes:)`, which silently breaks compilation — `size(withAttributes:)`
+# is an NSString bridging method that only resolves via implicit-self member lookup when the
+# receiver is explicitly written as `self.`, not when self is implicit. Needs a manual
+# `(self as NSString)` cast alongside formatting, not a mechanical pass.
+
+# ChagiLegacy/Sources/ChagiLegacy/Domain/FeatureFlags/FeatureFlag.swift is excluded: redundantReturn strips `return` from
+# the Release #else branch's single-expression `return false`, which the release-safety-guard CI
+# job's awk/grep check greps for as the literal string "return false". The implicit-return form is
+# behaviourally identical but breaks that guard's text match.
+
+# Utilities/Tests/UtilitiesTests/NSLockingRunTests.swift is excluded: redundantThrows strips the
+# (unused) `throws` from `func testRun() throws`, but that `throws` is load-bearing — it changes
+# the bridged Objective-C selector enough to avoid colliding with `XCTest`'s own `testRun`
+# property getter. Without it, the compiler reports "method 'testRun()' ... conflicts with getter
+# for 'testRun' from superclass 'XCTest'".
+
+# Utilities/Tests/UtilitiesTests/GenericErrorTests.swift is excluded: the semicolons rule splits
+# `let error = GenericError(message); let line = #line` onto two lines. Both halves rely on being
+# on the SAME source line so `#line`'s default-parameter capture on the first half matches the
+# explicit `#line` on the second — splitting them breaks the equality the test asserts, and shifts
+# every #line-derived expectation below it by one.
+
+# Whitespace and indentation
+--indent 4
+--tab-width 4
+--smart-tabs enabled
+--linebreaks lf
+--trim-whitespace always
+--indent-case false
+--ifdef indent
+--xcode-indentation disabled
+
+# Line wrapping
+--max-width 120
+--wrap-arguments before-first
+--wrap-collections before-first
+--wrap-conditions after-first
+--wrap-type-aliases before-first
+--closing-paren balanced
+--call-site-paren balanced
+--allow-partial-wrapping false
+--func-attributes prev-line
+--wrap-enum-cases always
+
+# Language style
+--allman false
+--else-position same-line
+--guard-else auto
+--strip-unused-args closure-only
+--semicolons never
+--trailing-commas never
+--void-type void
+--pattern-let hoist
+--ranges spaced
+--operator-func spaced
+--empty-braces no-space
+
+# Imports and comments
+--import-grouping access-control,alpha,testable-last
+--header ignore
+--doc-comments before-non-local-declarations
+--line-after-marks true
+
+# Literals
+--decimal-grouping 3, 6
+--binary-grouping 4, 8
+--octal-grouping 4, 8
+--hex-grouping 4, 8
+--hex-literal-case uppercase
+--exponent-case lowercase
+--asset-literals visual-width
+
+# SwiftFormat's default rules remain enabled. These opt-ins are narrowly chosen
+# for readability and idiomatic APIs while avoiding declaration reordering and
+# other rules that tend to create large or potentially surprising diffs.
+--enable blankLinesAfterGuardStatements,isEmpty,preferContains,preferFirstWhere,preferMinOverSorted,singlePropertyPerLine,wrapEnumCases,wrapGuardStatementBodies,wrapMultilineConditionalAssignment,wrapMultilineFunctionChains,wrapSwitchCases,redundantStaticSelf
+
+# Disabled deliberately, and not only because it conflicts with SwiftLint's
+# opening_brace rule. The opening brace stays on the same line as the condition:
+#
+#   if let a = x, let b = y {          NOT    if let a = x, let b = y
+#       …                                     {
+#   }                                             …
+#                                             }
+#
+# It also drags a trailing closure's `{ item in` onto its own line after a
+# multiline call's closing paren, which is worse again. Leave it off.
+--disable wrapMultilineStatementBraces
