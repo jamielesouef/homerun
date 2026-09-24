@@ -14,6 +14,7 @@ protocol GitClienting: Sendable {
     func fastForward(at url: URL) async throws(GitError)
     func clone(remoteURL: String, into destination: URL) async throws(GitError)
     func checkout(branch: String, at url: URL) async throws(GitError)
+    func createBranch(_ branch: String, at url: URL) async throws(GitError)
     func localTags(at url: URL) async throws(GitError) -> [String]
     func remoteTags(remote: String, at url: URL) async throws(GitError) -> Set<String>
     func remoteURL(at url: URL) async throws(GitError) -> String?

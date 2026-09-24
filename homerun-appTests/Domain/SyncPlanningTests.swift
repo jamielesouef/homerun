@@ -2,6 +2,21 @@ import Foundation
 import Testing
 @testable import homerun_app
 
+@Suite("ProtectedBranchFallbackUseCase", .tags(.domain))
+struct ProtectedBranchFallbackUseCaseTests {
+    @Test("names the fallback branch after the refused branch and the time of the sync")
+    func namesTheFallbackBranch() throws {
+        let timeZone = try #require(TimeZone(identifier: "UTC"))
+        let name = ProtectedBranchFallbackUseCase.branchName(
+            for: "main",
+            timestamp: Date(timeIntervalSince1970: 1_758_600_000),
+            timeZone: timeZone
+        )
+
+        #expect(name == "homerun/main-20250923-040000")
+    }
+}
+
 @Suite("WIPCommitMessageUseCase", .tags(.domain))
 struct WIPCommitMessageUseCaseTests {
     @Test("prefers the repository prefix, then the app-wide one, then WIP", arguments: [

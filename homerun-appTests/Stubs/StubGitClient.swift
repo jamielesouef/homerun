@@ -17,6 +17,7 @@ actor StubGitClient: GitClienting {
     var fastForwardError: GitError?
     var cloneError: GitError?
     var checkoutError: GitError?
+    var createBranchError: GitError?
     var localTagNames: [String] = []
     var remoteTagNames: Set<String> = []
     var head: String? = "head0001"
@@ -58,6 +59,7 @@ actor StubGitClient: GitClienting {
     private(set) var pushes: [(branch: String, remote: String, setUpstream: Bool)] = []
     private(set) var clones: [(remoteURL: String, destination: URL)] = []
     private(set) var checkouts: [String] = []
+    private(set) var createdBranches: [String] = []
 
     // MARK: - Configuration helpers
 
@@ -76,6 +78,10 @@ actor StubGitClient: GitClienting {
 
     func setCommitError(_ error: GitError?) {
         commitError = error
+    }
+
+    func setCreateBranchError(_ error: GitError?) {
+        createBranchError = error
     }
 
     func setFastForwardError(_ error: GitError?) {
@@ -218,6 +224,15 @@ actor StubGitClient: GitClienting {
 
         if let checkoutError {
             throw checkoutError
+        }
+    }
+
+    func createBranch(_ branch: String, at url: URL) async throws(GitError) {
+        calls.append("createBranch")
+        createdBranches.append(branch)
+
+        if let createBranchError {
+            throw createBranchError
         }
     }
 

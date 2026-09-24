@@ -221,6 +221,11 @@ final class SyncService {
             identifier: step.identifier,
             directory: directory,
             branch: branch,
+            protectedBranchFallback: ProtectedBranchFallbackUseCase.branchName(
+                for: branch,
+                timestamp: clock.now(),
+                timeZone: clock.timeZone
+            ),
             remote: remote,
             remoteURL: repository.snapshot?.remoteURL,
             setsUpstream: setsUpstream,

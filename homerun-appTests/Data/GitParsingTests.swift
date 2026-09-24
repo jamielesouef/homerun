@@ -97,6 +97,18 @@ struct GitFailureClassifierTests {
         #expect(GitFailureClassifier.error(for: message) == .diverged)
     }
 
+    @Test("recognises a remote refusing the branch itself", arguments: [
+        "remote: error: GH006: Protected branch update failed for refs/heads/main.",
+        "remote: error: GH013: Repository rule violations found for refs/heads/main.",
+        "! [remote rejected] main -> main (protected branch hook declined)",
+        "remote: GitLab: You are not allowed to push code to protected branches on this project.",
+        "! [remote rejected] main -> main (pre-receive hook declined)\nerror: failed to push some refs"
+    ])
+    func recognisesProtectedBranch(message: String) {
+        #expect(GitFailureClassifier.isProtectedBranchFailure(message))
+        #expect(GitFailureClassifier.error(for: message) == .branchProtected(message))
+    }
+
     @Test("falls back to the raw command failure for anything else")
     func fallsBack() {
         #expect(GitFailureClassifier.error(for: "fatal: bad object") == .commandFailed("fatal: bad object"))

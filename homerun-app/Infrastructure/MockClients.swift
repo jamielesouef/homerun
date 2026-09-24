@@ -47,6 +47,8 @@
 
         func checkout(branch: String, at url: URL) async throws(GitError) {}
 
+        func createBranch(_ branch: String, at url: URL) async throws(GitError) {}
+
         func localTags(at url: URL) async throws(GitError) -> [String] {
             []
         }

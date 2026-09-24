@@ -3,6 +3,7 @@ import Foundation
 enum SyncFailure: Error, Equatable {
     case authentication(String)
     case diverged
+    case protectedBranchFallbackFailed(branch: String, fallback: String, detail: String)
     case noRemote
     case noUpstream
     case branchNotAllowed(String)
@@ -17,6 +18,8 @@ enum SyncFailure: Error, Equatable {
             String(localized: "Authentication failed: \(detail)")
         case .diverged:
             String(localized: "The branch has diverged from its remote. Resolve it by hand.")
+        case let .protectedBranchFallbackFailed(branch, fallback, detail):
+            String(localized: "The remote refuses pushes to \(branch), and pushing \(fallback) instead also failed: \(detail)")
         case .noRemote:
             String(localized: "No push destination is configured.")
         case .noUpstream:

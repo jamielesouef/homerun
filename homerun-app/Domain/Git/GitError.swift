@@ -8,6 +8,7 @@ enum GitError: Error, Equatable {
     case noUpstreamConfigured
     case authenticationFailed(String)
     case diverged
+    case branchProtected(String)
     case nothingToCommit
     case cancelled
 }

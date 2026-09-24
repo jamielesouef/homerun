@@ -174,6 +174,49 @@ struct ProcessGitClientIntegrationTests {
         #expect(try String(contentsOf: clone.appending(path: "README.md"), encoding: .utf8) == "second\n")
     }
 
+    @Test("recognises a real remote refusing the branch, then pushes a new branch with an upstream")
+    func pushesAroundProtectedBranch() async throws {
+        guard let fixture = try await makeFixture() else {
+            return
+        }
+
+        defer { fixture.remove() }
+        let hook = fixture.remote.appending(path: "hooks/pre-receive")
+        try """
+        #!/bin/sh
+        while read old new ref; do
+            [ "$ref" = "refs/heads/main" ] && exit 1
+        done
+        exit 0
+        """.write(to: hook, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: hook.path(percentEncoded: false))
+        try fixture.write("second\n", to: "README.md")
+        try await fixture.git(["commit", "--all", "--message", "Second"], at: fixture.workingCopy)
+
+        do {
+            try await fixture.client.push(branch: "main", remote: "origin", setUpstream: false, at: fixture.workingCopy)
+            Issue.record("Expected the remote to refuse main")
+        } catch {
+            guard case .branchProtected = error else {
+                Issue.record("Expected branchProtected, got \(error)")
+                return
+            }
+        }
+
+        try await fixture.client.createBranch("homerun/main-20260924-100000", at: fixture.workingCopy)
+        try await fixture.client.push(
+            branch: "homerun/main-20260924-100000",
+            remote: "origin",
+            setUpstream: true,
+            at: fixture.workingCopy
+        )
+
+        let snapshot = try await fixture.client.snapshot(at: fixture.workingCopy)
+        #expect(snapshot.currentBranch == "homerun/main-20260924-100000")
+        #expect(snapshot.upstreamBranch == "origin/homerun/main-20260924-100000")
+        #expect(snapshot.aheadCount == 0)
+    }
+
     @Test("refuses a diverged push instead of forcing it")
     func refusesDivergedPush() async throws {
         guard let fixture = try await makeFixture() else {

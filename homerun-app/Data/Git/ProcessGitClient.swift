@@ -161,6 +161,10 @@ struct ProcessGitClient: GitClienting {
         _ = try await runChecked(["checkout", branch], at: url)
     }
 
+    func createBranch(_ branch: String, at url: URL) async throws(GitError) {
+        _ = try await runChecked(["checkout", "-b", branch], at: url)
+    }
+
     func localTags(at url: URL) async throws(GitError) -> [String] {
         let result = try await runChecked(["tag", "--list"], at: url)
 
