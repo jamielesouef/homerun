@@ -40,13 +40,23 @@ struct SyncReviewSheet: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xsmall) {
-            Text(String(localized: "Review the sync"))
-                .font(.title2.weight(.semibold))
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: AppSpacing.xsmall) {
+                Text(String(localized: "Review the sync"))
+                    .font(.title2.weight(.semibold))
 
-            Text(String(localized: "Nothing is committed or pushed until you confirm."))
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                Text(String(localized: "Nothing is committed or pushed until you confirm."))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: AppSpacing.small)
+
+            if let plan = sync.reviewPlan, plan.hasUntrackedFiles {
+                Button(UntrackedSelectionUseCase.selectAllTitle(isEverythingSelected: plan.includesAllUntracked)) {
+                    sync.setAllUntracked(isSelected: plan.includesAllUntracked == false)
+                }
+            }
         }
     }
 
@@ -60,6 +70,8 @@ struct SyncReviewSheet: View {
                     ForEach(plan.steps) { step in
                         SyncPlanStepView(step: step) { path, isSelected in
                             sync.setUntracked(path, isSelected: isSelected, for: step.identifier)
+                        } onSelectAllUntracked: { isSelected in
+                            sync.setAllUntracked(isSelected: isSelected, for: step.identifier)
                         }
                     }
                 }

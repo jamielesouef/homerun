@@ -21,6 +21,14 @@ struct SyncPlan: Equatable {
         }
     }
 
+    var hasUntrackedFiles: Bool {
+        steps.contains(where: \.hasUntrackedFiles)
+    }
+
+    var includesAllUntracked: Bool {
+        hasUntrackedFiles && steps.filter(\.hasUntrackedFiles).allSatisfy(\.includesAllUntracked)
+    }
+
     var isEmpty: Bool {
         actionableSteps.isEmpty
     }

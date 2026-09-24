@@ -24,6 +24,14 @@ struct SyncPlanStep: Equatable, Identifiable {
         return String(localized: "\(repositoryName) › \(worktreeName)")
     }
 
+    var hasUntrackedFiles: Bool {
+        selectableUntrackedPaths.isEmpty == false
+    }
+
+    var includesAllUntracked: Bool {
+        hasUntrackedFiles && Set(includedUntrackedPaths) == Set(selectableUntrackedPaths)
+    }
+
     var isActionable: Bool {
         action.isActionable
     }

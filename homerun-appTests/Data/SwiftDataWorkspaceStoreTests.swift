@@ -96,6 +96,7 @@ struct SwiftDataWorkspaceStoreTests {
         let store = try makeStore()
 
         #expect(try store.loadPreferences() == .default)
+        #expect(try store.loadPreferences().includesUntrackedFilesByDefault == false)
     }
 
     @Test("round-trips changed preferences")
@@ -105,6 +106,7 @@ struct SwiftDataWorkspaceStoreTests {
         var preferences = AppPreferences.default
         preferences.wipCommitPrefix = "PARKED"
         preferences.requiresSyncConfirmation = false
+        preferences.includesUntrackedFilesByDefault = true
         preferences.defaultRepositoryStatusFilter = .dirty
         preferences.ignoredFolderNames = ["Pods"]
 
