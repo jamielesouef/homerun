@@ -12,9 +12,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app
+      - name: Build
+        run: xcodebuild -project homerun-app.xcodeproj -scheme homerun-app -destination 'platform=macOS' build
       - name: Run tests
-        working-directory: cli
-        run: swift test
+        run: xcodebuild -project homerun-app.xcodeproj -scheme homerun-app -destination 'platform=macOS' test
 
   lint:
     runs-on: macos-26
